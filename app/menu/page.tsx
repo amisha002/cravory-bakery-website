@@ -5,6 +5,7 @@ import { Footer } from "@/components/footer"
 import { MenuSection } from "@/components/menu-section"
 import { Cake, Cherry, Candy } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
@@ -22,6 +23,7 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [menuData, setMenuData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [sortOrder, setSortOrder] = useState<string>("default")
 
   useEffect(() => {
     fetchMenuItems()
@@ -412,63 +414,103 @@ export default function MenuPage() {
 
       <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b shadow-sm">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex gap-2 justify-center overflow-x-auto scrollbar-hide">
-            <Button
-              variant={activeCategory === "cakes" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("cakes")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Cakes
-            </Button>
-            <Button
-              variant={activeCategory === "cupcakes" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("cupcakes")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Cupcakes
-            </Button>
-            <Button
-              variant={activeCategory === "jar-cakes" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("jar-cakes")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Jar Cakes
-            </Button>
-            <Button
-              variant={activeCategory === "cheesecake" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("cheesecake")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Cheesecake
-            </Button>
-            <Button
-              variant={activeCategory === "chocolates" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("chocolates")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Chocolates
-            </Button>
-            <Button
-              variant={activeCategory === "liquor-chocolates" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("liquor-chocolates")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Liquor Chocolates
-            </Button>
-            <Button
-              variant={activeCategory === "cakesicles-popsicles" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToCategory("cakesicles-popsicles")}
-              className="whitespace-nowrap rounded-full"
-            >
-              Cakesicles & Popsicles
-            </Button>
+          <div className="flex gap-2 justify-center items-center">
+            <div className="hidden sm:flex gap-2 justify-center overflow-x-auto scrollbar-hide">
+              <Button
+                variant={activeCategory === "cakes" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("cakes")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Cakes
+              </Button>
+
+              <Button
+                variant={activeCategory === "cupcakes" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("cupcakes")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Cupcakes
+              </Button>
+
+              <Button
+                variant={activeCategory === "jar-cakes" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("jar-cakes")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Jar Cakes
+              </Button>
+
+              <Button
+                variant={activeCategory === "cheesecake" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("cheesecake")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Cheesecake
+              </Button>
+
+              <Button
+                variant={activeCategory === "chocolates" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("chocolates")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Chocolates
+              </Button>
+
+              <Button
+                variant={activeCategory === "liquor-chocolates" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("liquor-chocolates")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Liquor Chocolates
+              </Button>
+
+              <Button
+                variant={activeCategory === "cakesicles-popsicles" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => scrollToCategory("cakesicles-popsicles")}
+                className="whitespace-nowrap rounded-full"
+              >
+                Cakesicles & Popsicles
+              </Button>
+            </div>
+
+            {/* Mobile: category selector */}
+            <div className="sm:hidden">
+              <Select value={activeCategory ?? ""} onValueChange={(v) => scrollToCategory(v || "cakes") }>
+                <SelectTrigger className="w-40 h-8 text-sm">
+                  <SelectValue placeholder="Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cakes">Cakes</SelectItem>
+                  <SelectItem value="cupcakes">Cupcakes</SelectItem>
+                  <SelectItem value="jar-cakes">Jar Cakes</SelectItem>
+                  <SelectItem value="cheesecake">Cheesecake</SelectItem>
+                  <SelectItem value="chocolates">Chocolates</SelectItem>
+                  <SelectItem value="liquor-chocolates">Liquor Chocolates</SelectItem>
+                  <SelectItem value="cakesicles-popsicles">Cakesicles & Popsicles</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sort control (available on all sizes) */}
+            <div className="ml-2">
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger className="w-44 h-8 text-sm">
+                  <SelectValue placeholder="Sort by price" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="low-high">Price: Low to High</SelectItem>
+                  <SelectItem value="high-low">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -480,7 +522,7 @@ export default function MenuPage() {
               <p className="text-muted-foreground">Loading menu...</p>
             </div>
           ) : menuData ? (
-            <MenuSection data={menuData} />
+            <MenuSection data={menuData} sortOrder={sortOrder} />
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No menu items available</p>

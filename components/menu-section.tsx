@@ -185,7 +185,7 @@ const CategoryIcon = ({
   return null
 }
 
-export function MenuSection({ data }: { data: any }) {
+export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOrder?: string }) {
   const { addItem } = useCart()
   const { toast } = useToast()
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set())
@@ -289,6 +289,29 @@ const fallbackLiquorItems = [
         return newSet
       })
     }, 1500)
+  }
+
+  const getItemPrice = (item: any) => {
+    if (!item) return Infinity
+    // common price fields
+    if (typeof item.price === "number" && item.price > 0) return item.price
+    // cakes have halfPound / onePound
+    if (typeof item.halfPound === "number" && item.halfPound > 0) return item.halfPound
+    if (typeof item.onePound === "number" && item.onePound > 0) return item.onePound
+    // boxes may have pieces+price - handle if price is present
+    if (typeof item.pieces === "number" && typeof item.price === "number" && item.price > 0) return item.price
+    return Infinity
+  }
+
+  const sortArrayByPrice = (arr: any[]) => {
+    if (!arr || sortOrder === "default") return arr
+    const copy = [...arr]
+    copy.sort((a, b) => {
+      const pa = getItemPrice(a)
+      const pb = getItemPrice(b)
+      return sortOrder === "low-high" ? pa - pb : pb - pa
+    })
+    return copy
   }
 
   const AddButton = ({ uniqueKey, onClick, className = "", children }: any) => {
@@ -682,7 +705,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
         <h2 className="text-3xl font-bold mb-2 text-center">{safeCakes.title}</h2>
         <p className="text-center text-muted-foreground mb-8">{safeCakes.subtitle}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {safeCakes.items.map((item: any, index: number) => (
+          {sortArrayByPrice(safeCakes.items).map((item: any, index: number) => (
             <Card key={`${item.name}-${index}`} className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
@@ -814,7 +837,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             <div>
               <h3 className="text-xl font-semibold mb-4">Classic Flavours</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {safeCupcakes.classic.map((item: any, index: number) => (
+                {sortArrayByPrice(safeCupcakes.classic).map((item: any, index: number) => (
                   <CupcakeCard key={`${item.name}-${index}`} item={item} subcategory="classic" uniquePrefix="cupcake-classic" />
                 ))}
               </div>
@@ -825,7 +848,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             <div>
               <h3 className="text-xl font-semibold mb-4">Premium Flavours</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {safeCupcakes.premium.map((item: any, index: number) => (
+                {sortArrayByPrice(safeCupcakes.premium).map((item: any, index: number) => (
                   <CupcakeCard key={`${item.name}-${index}`} item={item} subcategory="premium" uniquePrefix="cupcake-premium" />
                 ))}
               </div>
@@ -836,7 +859,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             <div>
               <h3 className="text-xl font-semibold mb-4">Chocolate Specials</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {safeCupcakes.chocolate.map((item: any, index: number) => (
+                {sortArrayByPrice(safeCupcakes.chocolate).map((item: any, index: number) => (
                   <CupcakeCard key={`${item.name}-${index}`} item={item} subcategory="chocolate" uniquePrefix="cupcake-chocolate" />
                 ))}
               </div>
@@ -858,7 +881,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
       <section id="jar-cakes">
         <h2 className="text-3xl font-bold mb-8 text-center">{safeJarCakes.title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {safeJarCakes.items.map((item: any, index: number) => (
+          {sortArrayByPrice(safeJarCakes.items).map((item: any, index: number) => (
             <Card key={`${item.name}-${index}`}>
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <CategoryIcon category="jar" flavor={item.name} />
@@ -891,7 +914,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
       <section id="cheesecake">
         <h2 className="text-3xl font-bold mb-8 text-center">{safeCheesecake.title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-          {safeCheesecake.items.map((item: any, index: number) => (
+          {sortArrayByPrice(safeCheesecake.items).map((item: any, index: number) => (
             <Card key={`${item.name}-${index}`} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6 flex flex-col items-center text-center gap-3">
                 <CategoryIcon category="cheesecake" flavor={item.name} />
@@ -924,7 +947,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
         <h2 className="text-3xl font-bold mb-8 text-center">{safeChocolates.title}</h2>
         {safeChocolates.flavours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {safeChocolates.flavours.map((flavour: any, index: number) => (
+            {sortArrayByPrice(safeChocolates.flavours).map((flavour: any, index: number) => (
   <ChocolateCard
     key={`${flavour.name}-${index}`}
     item={flavour}
@@ -957,7 +980,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
         <h2 className="text-3xl font-bold mb-8 text-center">{safeLiquor.title}</h2>
         {safeLiquor.flavours && safeLiquor.flavours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {safeLiquor.flavours.map((flavour: any, index: number) => (
+            {sortArrayByPrice(safeLiquor.flavours).map((flavour: any, index: number) => (
   <ChocolateCard
     key={`${flavour.name}-${index}`}
     item={flavour}
@@ -998,7 +1021,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             <p className="text-muted-foreground mb-4">{safeCakesicles.description || "All flavours available"}</p>
             {safeCakesicles.items && safeCakesicles.items.length > 0 ? (
               <div className="space-y-3">
-                {safeCakesicles.items.map((item: any, index: number) => (
+                {sortArrayByPrice(safeCakesicles.items).map((item: any, index: number) => (
                 <div key={`${item.name}-${index}`} className="flex justify-between items-center">
                     <div>
                       <span className="font-semibold">{item.name}</span>
@@ -1056,7 +1079,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             <p className="text-muted-foreground mb-4">{safePopsicles.description || "All flavours available"}</p>
             {safePopsicles.items && safePopsicles.items.length > 0 ? (
               <div className="space-y-3">
-                {safePopsicles.items.map((item: any, index: number) => (
+                {sortArrayByPrice(safePopsicles.items).map((item: any, index: number) => (
                   <div key={`${item.name}-${index}`} className="flex justify-between items-center">
                     <div>
                       <span className="font-semibold">{item.name}</span>

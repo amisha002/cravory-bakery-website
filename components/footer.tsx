@@ -102,6 +102,7 @@ export function Footer() {
         <div className="mt-8 pt-8 border-t border-border text-center space-y-2">
           <p className="text-sm text-muted-foreground italic">Baked with love by Aishwarya ❤️</p>
           <p className="text-sm text-muted-foreground">© 2025 CRAVORY. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">Delivery available within 5 km near Rishra. Delivery charges vary according to distance.</p>
           <p className="text-xs text-muted-foreground">Designed & Developed by Amisha</p>
         </div>
       </div>

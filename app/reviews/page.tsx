@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import { AnimateOnView } from "@/components/animate-on-view"
+import { motion, AnimatePresence } from "framer-motion"
 import { DecorativeBackground } from "@/components/decorative-background"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
@@ -36,6 +37,8 @@ export default function ReviewsPage() {
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [lightboxZoomed, setLightboxZoomed] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -288,11 +291,17 @@ export default function ReviewsPage() {
                     <p className="text-foreground mb-5 leading-relaxed text-[15px] flex-1">{review.review}</p>
                     {review.image_url && (
                       <div className="mb-5 -mx-2 sm:-mx-3">
-                        <img
-                          src={review.image_url}
-                          alt="Review image"
-                          className="w-full h-48 sm:h-52 object-cover rounded-lg"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => { setLightboxImage(review.image_url); setLightboxZoomed(false) }}
+                          className="w-full h-48 sm:h-52 overflow-hidden rounded-lg"
+                        >
+                          <img
+                            src={review.image_url}
+                            alt="Review image"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </button>
                       </div>
                     )}
                     <div className="pt-4 border-t border-border/50 mt-auto">
@@ -318,6 +327,44 @@ export default function ReviewsPage() {
           )}
         </div>
       </div>
+
+        <AnimatePresence>
+          {lightboxImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+              onClick={() => setLightboxImage(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="relative max-w-4xl w-full max-h-[90vh] overflow-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  aria-label="Close"
+                  className="absolute top-4 right-4 z-20 text-white bg-black/30 rounded-full p-2"
+                  onClick={() => setLightboxImage(null)}
+                >
+                  ✕
+                </button>
+                <div className="flex items-center justify-center">
+                  <motion.img
+                    src={lightboxImage}
+                    alt="Review image"
+                    onClick={() => setLightboxZoomed((s) => !s)}
+                    className={`max-h-[85vh] w-auto object-contain transition-transform duration-300 ${lightboxZoomed ? "scale-125" : "scale-100"}`}
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <Footer />
       </div>

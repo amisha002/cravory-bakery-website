@@ -262,7 +262,8 @@ export default function AdminGalleryUploadPage() {
                   onClick={() => handleDelete(img)}
                   disabled={deletingId === img.id}
                   className={
-                    "absolute top-2 right-2 h-8 w-8 p-0 rounded-full transition-opacity transform duration-200 ease-out opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0"
+                    // Visible on small screens (mobile) by default, keep hover-reveal on larger screens
+                    "absolute top-2 right-2 h-8 w-8 p-0 rounded-full transition-opacity duration-200 ease-out opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   }
                 >
                   {deletingId === img.id ? (

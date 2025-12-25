@@ -68,8 +68,8 @@ export default function GalleryPage() {
   }
 
   const staticCategories = ["Birthday Cakes", "Anniversary Cakes", "Custom Cakes", "Cupcakes", "Chocolates", "Sweet Cravings"]
-  const availableCategories = staticCategories.filter(cat => images.some(img => img.category === cat))
-  const categories = ["All", ...availableCategories]
+  // Always show the defined categories (including "All") and allow client-side filtering
+  const categories = ["All", ...staticCategories]
 
   const filteredImages = selectedCategory === "All" 
     ? images 
@@ -95,20 +95,22 @@ export default function GalleryPage() {
       <div className="py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {categories.length > 1 && (
-            <div className="mb-12 flex flex-wrap gap-3 justify-center">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                      : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
+            <div className="mb-12">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 py-2 sm:justify-center sm:flex-wrap">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`min-w-[120px] flex-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shrink-0 ${
+                      selectedCategory === category
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
