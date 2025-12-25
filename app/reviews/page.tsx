@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import { AnimateOnView } from "@/components/animate-on-view"
 import { motion, AnimatePresence } from "framer-motion"
-import { DecorativeBackground } from "@/components/decorative-background"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
@@ -161,7 +160,6 @@ export default function ReviewsPage() {
 
   return (
     <>
-      <DecorativeBackground />
       <div className="relative z-10 min-h-screen">
         <Navbar />
 
@@ -178,10 +176,10 @@ export default function ReviewsPage() {
 
       <div className="py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-          <Card className="mb-16 border-2 border-primary/20 shadow-lg bg-background/50 backdrop-blur-sm">
+          <Card className="mb-16 border border-pink-100/60 shadow-xl bg-white rounded-2xl">
             <CardContent className="p-8 sm:p-10">
-              <h2 className="text-3xl font-bold mb-2 text-foreground">Share Your Experience</h2>
-              <p className="text-muted-foreground mb-8">We'd love to hear from you!</p>
+              <h2 className="text-3xl font-bold mb-2 text-gray-900">Share Your Experience</h2>
+              <p className="text-gray-600 mb-8">We'd love to hear from you!</p>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="review-name" className="text-base font-medium">Your Name *</Label>
@@ -199,20 +197,31 @@ export default function ReviewsPage() {
                   <Label className="text-base font-medium">Your Rating *</Label>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button
+                      <motion.button
                         key={star}
                         type="button"
                         onClick={() => setFormData({ ...formData, rating: star })}
-                        className="transition-all duration-200 hover:scale-110 active:scale-95"
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="transition-all duration-200"
                       >
-                        <Star
-                          className={`h-9 w-9 transition-colors duration-200 ${
+                        <motion.div
+                          animate={
                             star <= formData.rating
-                              ? "fill-primary text-primary drop-shadow-sm"
-                              : "text-muted-foreground/40"
-                          }`}
-                        />
-                      </button>
+                              ? { filter: "drop-shadow(0 0 8px rgba(var(--primary), 0.6))" }
+                              : { filter: "drop-shadow(0 0 0px rgba(var(--primary), 0))" }
+                          }
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Star
+                            className={`h-9 w-9 transition-colors duration-200 ${
+                              star <= formData.rating
+                                ? "fill-primary text-primary drop-shadow-sm"
+                                : "text-muted-foreground/40"
+                            }`}
+                          />
+                        </motion.div>
+                      </motion.button>
                     ))}
                   </div>
                 </div>
@@ -275,49 +284,99 @@ export default function ReviewsPage() {
           )}
 
           {!loading && !error && reviews.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                    delayChildren: 0.1,
+                  },
+                },
+              }}
+            >
               {reviews.map((review, index) => (
-                <AnimateOnView key={index} delay={index * 0.1}>
-                  <Card className="h-full flex flex-col border-2 border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg bg-background/50 backdrop-blur-sm">
-                    <CardContent className="p-6 sm:p-7 flex flex-col flex-1">
-                    <div className="flex items-center gap-1 mb-4">
-                      {Array.from({ length: review.rating }).map((_, i) => (
-                        <Star key={i} className="h-5 w-5 fill-primary text-primary drop-shadow-sm" />
-                      ))}
-                      {Array.from({ length: 5 - review.rating }).map((_, i) => (
-                        <Star key={`empty-${i}`} className="h-5 w-5 text-muted-foreground/20" />
-                      ))}
-                    </div>
-                    <p className="text-foreground mb-5 leading-relaxed text-[15px] flex-1">{review.review}</p>
-                    {review.image_url && (
-                      <div className="mb-5 -mx-2 sm:-mx-3">
-                        <button
-                          type="button"
-                          onClick={() => { setLightboxImage(review.image_url); setLightboxZoomed(false) }}
-                          className="w-full h-48 sm:h-52 overflow-hidden rounded-lg"
+                <motion.div
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+                  }}
+                >
+                  <AnimateOnView delay={index * 0.05}>
+                    <motion.div
+                      whileHover={{ y: -6 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                      <Card className="h-full flex flex-col border-2 border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl bg-background/50 backdrop-blur-sm">
+                        <CardContent className="p-6 sm:p-7 flex flex-col flex-1">
+                        <motion.div 
+                          className="flex items-center gap-1 mb-4"
+                          initial={{ opacity: 0 }}
+                          whileInView={{ opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: index * 0.1 + 0.3, duration: 0.4 }}
                         >
-                          <img
-                            src={review.image_url}
-                            alt="Review image"
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        </button>
-                      </div>
-                    )}
-                    <div className="pt-4 border-t border-border/50 mt-auto">
-                      <p className="font-semibold text-foreground mb-1">{review.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(review.created_at).toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                </AnimateOnView>
+                          {Array.from({ length: review.rating }).map((_, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ scale: 0, rotate: -180 }}
+                              whileInView={{ scale: 1, rotate: 0 }}
+                              viewport={{ once: true }}
+                              transition={{
+                                delay: index * 0.1 + 0.3 + i * 0.05,
+                                duration: 0.4,
+                                type: "spring",
+                                stiffness: 200,
+                                damping: 15,
+                              }}
+                            >
+                              <Star className="h-5 w-5 fill-primary text-primary drop-shadow-sm" />
+                            </motion.div>
+                          ))}
+                          {Array.from({ length: 5 - review.rating }).map((_, i) => (
+                            <Star key={`empty-${i}`} className="h-5 w-5 text-muted-foreground/20" />
+                          ))}
+                        </motion.div>
+                        <p className="text-foreground mb-5 leading-relaxed text-[15px] flex-1">{review.review}</p>
+                        {review.image_url && (
+                          <div className="mb-5 -mx-2 sm:-mx-3">
+                            <motion.button
+                              type="button"
+                              onClick={() => { setLightboxImage(review.image_url); setLightboxZoomed(false) }}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className="w-full h-48 sm:h-52 overflow-hidden rounded-lg"
+                            >
+                              <img
+                                src={review.image_url}
+                                alt="Review image"
+                                className="w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-105"
+                              />
+                            </motion.button>
+                          </div>
+                        )}
+                        <div className="pt-4 border-t border-border/50 mt-auto">
+                          <p className="font-semibold text-foreground mb-1">{review.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(review.created_at).toLocaleDateString("en-US", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    </motion.div>
+                  </AnimateOnView>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
 
           {!loading && !error && reviews.length === 0 && (

@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 import { AnimateOnView } from "@/components/animate-on-view"
-import { DecorativeBackground } from "@/components/decorative-background"
 import { supabase } from "@/lib/supabase"
 
 export const dynamic = "force-dynamic"
@@ -77,7 +76,6 @@ export default function GalleryPage() {
 
   return (
     <>
-      <DecorativeBackground />
       <div className="relative z-10 min-h-screen">
         <Navbar />
 
@@ -95,23 +93,32 @@ export default function GalleryPage() {
       <div className="py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {categories.length > 1 && (
-            <div className="mb-12">
+            <motion.div className="mb-12">
               <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 py-2 sm:justify-center sm:flex-wrap">
-                {categories.map((category) => (
-                  <button
+                {categories.map((category, idx) => (
+                  <motion.button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`min-w-[120px] flex-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shrink-0 ${
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`min-w-[120px] flex-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shrink-0 relative ${
                       selectedCategory === category
-                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                         : "bg-muted hover:bg-muted/80 text-muted-foreground"
                     }`}
                   >
+                    {selectedCategory === category && (
+                      <motion.div
+                        layoutId="category-active"
+                        className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full -z-10"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
                     {category}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {loading && (
@@ -133,37 +140,60 @@ export default function GalleryPage() {
           )}
 
           {!loading && !error && filteredImages.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.08,
+                    delayChildren: 0.1,
+                  },
+                },
+              }}
+            >
               {filteredImages.map((image, index) => (
-                <AnimateOnView key={index} delay={index * 0.1}>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="cursor-pointer group"
-                  >
-                    <Card 
-                      className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 border-0 bg-background/50 backdrop-blur-sm"
-                      onClick={() => setSelectedImage(image)}
+                <motion.div
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+                  }}
+                >
+                  <AnimateOnView delay={index * 0.05}>
+                    <motion.div
+                      whileHover={{ scale: 1.04, y: -4 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="cursor-pointer group h-full"
                     >
-                      <div className="aspect-square relative overflow-hidden bg-muted/50 rounded-t-lg">
-                        <img
-                          src={image.image_url}
-                          alt={image.caption || `Gallery image ${index + 1}`}
-                          loading="lazy"
-                          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      </div>
-                    {image.caption && (
-                      <div className="p-4 sm:p-5 bg-background">
-                        <p className="text-sm text-foreground font-medium leading-relaxed line-clamp-2">{image.caption}</p>
-                      </div>
-                    )}
-                  </Card>
-                  </motion.div>
-                </AnimateOnView>
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/15 border-0 bg-background/50 backdrop-blur-sm h-full"
+                        onClick={() => setSelectedImage(image)}
+                      >
+                        <div className="aspect-square relative overflow-hidden bg-muted/50 rounded-t-lg">
+                          <img
+                            src={image.image_url}
+                            alt={image.caption || `Gallery image ${index + 1}`}
+                            loading="lazy"
+                            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      {image.caption && (
+                        <div className="p-4 sm:p-5 bg-background">
+                          <p className="text-sm text-foreground font-medium leading-relaxed line-clamp-2">{image.caption}</p>
+                        </div>
+                      )}
+                    </Card>
+                    </motion.div>
+                  </AnimateOnView>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
