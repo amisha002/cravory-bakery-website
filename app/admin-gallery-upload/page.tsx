@@ -40,6 +40,7 @@ export default function AdminGalleryUploadPage() {
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>("All")
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -245,36 +246,73 @@ export default function AdminGalleryUploadPage() {
         {loading ? (
           <p className="text-center">Loading images…</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {images.map((img, i) => (
-              <div key={img.id ?? i} className="relative group">
-                <Card>
-                  <img src={img.image_url} className="h-40 w-full object-cover" />
-                  <CardContent className="p-2">
-                    {img.caption && <p className="text-sm text-muted-foreground">{img.caption}</p>}
-                  </CardContent>
-                </Card>
-
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  aria-label="Delete image"
-                  onClick={() => handleDelete(img)}
-                  disabled={deletingId === img.id}
-                  className={
-                    // Visible on small screens (mobile) by default, keep hover-reveal on larger screens
-                    "absolute top-2 right-2 h-8 w-8 p-0 rounded-full transition-opacity duration-200 ease-out opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                  }
-                >
-                  {deletingId === img.id ? (
-                    <span className="text-xs">...</span>
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
+          <>
+            {/* Category filters (client-side only) */}
+            <div className="mb-4">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {[
+                  "All",
+                  "Birthday Cakes",
+                  "Anniversary Cakes",
+                  "Custom Cakes",
+                  "Cupcakes",
+                  "Chocolates",
+                  "Sweet Cravings",
+                ].map((cat) => {
+                  const active = selectedCategory === cat
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={
+                        "whitespace-nowrap px-3 py-1.5 rounded-full text-sm transition-colors " +
+                        (active
+                          ? "bg-primary text-white shadow-sm"
+                          : "bg-muted/10 text-muted-foreground hover:bg-muted/20")
+                      }
+                    >
+                      {cat}
+                    </button>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {(
+                selectedCategory === "All"
+                  ? images
+                  : images.filter((img) => img.category === selectedCategory)
+              ).map((img, i) => (
+                <div key={img.id ?? i} className="relative group">
+                  <Card>
+                    <img src={img.image_url} className="h-40 w-full object-cover" />
+                    <CardContent className="p-2">
+                      {img.caption && <p className="text-sm text-muted-foreground">{img.caption}</p>}
+                    </CardContent>
+                  </Card>
+
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    aria-label="Delete image"
+                    onClick={() => handleDelete(img)}
+                    disabled={deletingId === img.id}
+                    className={
+                      // Visible on small screens (mobile) by default, keep hover-reveal on larger screens
+                      "absolute top-2 right-2 h-8 w-8 p-0 rounded-full transition-opacity duration-200 ease-out opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    }
+                  >
+                    {deletingId === img.id ? (
+                      <span className="text-xs">...</span>
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

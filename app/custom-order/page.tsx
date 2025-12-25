@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -98,19 +99,108 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
       </div>
 
       <div className="py-16">
-        <div className="container mx-auto px-4 max-w-2xl">
+        <div className="container mx-auto px-6 max-w-7xl">
           <div className="text-center mb-8 animate-fade-in-up">
-            <p className="text-muted-foreground italic">
+            <p className="text-muted-foreground italic leading-relaxed">
               Your custom cake will be <span className="font-semibold text-primary">baked with love by Aishwarya</span>
             </p>
           </div>
 
-          <Card className="animate-scale-in hover:shadow-2xl transition-shadow">
-            <CardHeader>
-              <CardTitle>Order Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-10 md:grid-cols-3 items-start">
+            <div className="md:col-span-1">
+              <section aria-labelledby="custom-orders-header" className="mb-6">
+                <h2 id="custom-orders-header" className="text-3xl md:text-4xl font-bold leading-snug">Custom Orders</h2>
+                <p className="text-muted-foreground mt-2 leading-relaxed">Made with love for every sweet occasion</p>
+              </section>
+
+              <section aria-labelledby="why-choose" className="grid gap-4 mb-6">
+                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <Cake className="h-6 w-6 text-primary/80" />
+                    <div>
+                      <h3 className="font-semibold">Freshly Handmade</h3>
+                      <p className="text-sm text-muted-foreground">Lovingly prepared in small batches to ensure freshness.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <Gift className="h-6 w-6 text-secondary/80" />
+                    <div>
+                      <h3 className="font-semibold">Premium Ingredients</h3>
+                      <p className="text-sm text-muted-foreground">We use high-quality ingredients for rich flavours and texture.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <PartyPopper className="h-6 w-6 text-accent/80" />
+                    <div>
+                      <h3 className="font-semibold">Made to Order</h3>
+                      <p className="text-sm text-muted-foreground">Custom sizes, flavours and designs tailored to your event.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section aria-labelledby="customize-what" className="mb-6">
+                <h3 id="customize-what" className="text-lg font-semibold mb-3">What Can Be Customized</h3>
+                <div className="flex gap-3 flex-wrap">
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <p className="font-medium">Cakes</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <p className="font-medium">Cupcakes</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <p className="font-medium">Dessert Boxes</p>
+                  </div>
+                </div>
+              </section>
+
+              <section aria-labelledby="how-to-order" className="mb-6">
+                <h3 id="how-to-order" className="text-lg font-semibold mb-2">How to Order</h3>
+                <p className="text-muted-foreground mb-4">Share your inspiration &amp; requirements — we'll take it from there.</p>
+                <div className="flex gap-3 flex-wrap">
+                  <Button asChild>
+                    <a href="https://wa.me/918420174756" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
+                    </a>
+                  </Button>
+
+                  <Button asChild variant="outline">
+                    <a href="tel:8420174756" className="inline-flex items-center gap-2">
+                      Call Us
+                    </a>
+                  </Button>
+                </div>
+              </section>
+
+              <section className="mb-6">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-lg font-semibold">Ready to create something special?</h4>
+                      <p className="text-sm text-muted-foreground">Start by filling the form below — we'll follow up on WhatsApp.</p>
+                    </div>
+                    <div>
+                      <Button onClick={() => { const el = document.getElementById('design-upload'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}>Start Your Order</Button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="md:col-span-2">
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+                <Card className="animate-scale-in hover:shadow-2xl transition-shadow">
+                  <CardHeader>
+                    <CardTitle>Order Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label>Reference Design Image (Optional)</Label>
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-all hover:scale-105 duration-300">
@@ -294,6 +384,9 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
               </form>
             </CardContent>
           </Card>
+          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
 
