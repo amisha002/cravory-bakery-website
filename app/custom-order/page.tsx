@@ -52,7 +52,7 @@ export default function CustomOrderPage() {
     }
 
     const orderDetails = `
-Hi! I'd like to place a custom order:%0A%0A
+Hi! I'd like to place a customized order:%0A%0A
 Name: ${formData.name}%0A
 Phone: ${formData.phone}%0A
 Cake Type: ${formData.cakeType}%0A
@@ -92,7 +92,7 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
           <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
             <h1 className="text-5xl md:text-6xl font-bold mb-4 text-balance">Customized Orders</h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Create your perfect custom cake for any special occasion
+              Create your perfect customized cake for any special occasion
             </p>
           </div>
         </div>
@@ -102,14 +102,14 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="text-center mb-8 animate-fade-in-up">
             <p className="text-muted-foreground italic leading-relaxed">
-              Your custom cake will be <span className="font-semibold text-primary">baked with love by Aishwarya</span>
+              Your customized cake will be <span className="font-semibold text-primary">baked with love by Aishwarya</span>
             </p>
           </div>
 
           <div className="grid gap-10 md:grid-cols-3 items-start">
             <div className="md:col-span-1">
-              <section aria-labelledby="custom-orders-header" className="mb-6">
-                <h2 id="custom-orders-header" className="text-3xl md:text-4xl font-bold leading-snug">Custom Orders</h2>
+              <section aria-labelledby="customized-orders-header" className="mb-6">
+                <h2 id="customized-orders-header" className="text-3xl md:text-4xl font-bold leading-snug">Customized Orders</h2>
                 <p className="text-muted-foreground mt-2 leading-relaxed">Made with love for every sweet occasion</p>
               </section>
 
@@ -183,7 +183,7 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <h4 className="text-lg font-semibold">Ready to create something special?</h4>
-                      <p className="text-sm text-muted-foreground">Start by filling the form below — we'll follow up on WhatsApp.</p>
+                      <p className="text-sm text-muted-foreground">Start by filling the form on the right — we'll follow up on WhatsApp.</p>
                     </div>
                     <div>
                       <Button onClick={() => { const el = document.getElementById('design-upload'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}>Start Your Order</Button>
@@ -225,7 +225,7 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
                       <label htmlFor="design-upload" className="cursor-pointer">
                         <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground animate-bounce-slow" />
                         <p className="text-sm text-muted-foreground mb-2">
-                          Upload a reference image for your custom cake
+                          Upload a reference image for your customized cake
                         </p>
                         <Button
                           type="button"
@@ -379,7 +379,7 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
                 </Button>
 
                 <p className="text-sm text-center text-muted-foreground">
-                  You'll be redirected to WhatsApp to finalize your custom order
+                  You'll be redirected to WhatsApp to finalize your customized order
                 </p>
               </form>
             </CardContent>
