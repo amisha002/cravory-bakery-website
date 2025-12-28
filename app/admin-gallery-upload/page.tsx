@@ -1,22 +1,44 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { Reorder } from "framer-motion"
+import Link from "next/link"
+import {
+  Trash2,
+  Package,
+  Image as ImageIcon,
+  GripVertical,
+  Check,
+  X,
+} from "lucide-react"
+
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, Package, Image as ImageIcon } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/lib/auth"
-import Link from "next/link"
 
 export const dynamic = "force-dynamic"
+
+/* ================= AUTO SCROLL CONFIG ================= */
+
+const EDGE_MARGIN = 120
+const MAX_SCROLL_SPEED = 40
+
+/* ================= TYPES ================= */
 
 interface GalleryImage {
   id: string
@@ -24,295 +46,318 @@ interface GalleryImage {
   image_path?: string
   category: string | null
   caption: string | null
-  uploaded_by?: string
   created_at: string
+  order_index: number | null
 }
+
+/* ================= PAGE ================= */
 
 export default function AdminGalleryUploadPage() {
   const { user, loading: authLoading } = useAdminAuth()
   const router = useRouter()
   const { toast } = useToast()
 
-  const [formData, setFormData] = useState({ category: "", caption: "" })
+  /* upload */
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [formCategory, setFormCategory] = useState("")
+  const [formCaption, setFormCaption] = useState("")
   const [uploading, setUploading] = useState(false)
+
+  /* gallery */
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string>("All")
+  const [selectedCategory, setSelectedCategory] = useState("All")
+
+  /* caption */
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState("")
+  const [savingCaption, setSavingCaption] = useState(false)
+
+  /* reorder */
+  const [reorderMode, setReorderMode] = useState(false)
+  const [reorderItems, setReorderItems] = useState<GalleryImage[]>([])
+  const [savingOrder, setSavingOrder] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  /* auto scroll refs */
+  const pointerY = useRef<number | null>(null)
+  const rafId = useRef<number | null>(null)
+
+  /* ============ AUTH ============ */
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/admin/login"
+    if (!authLoading && !user) router.push("/admin/login")
+  }, [authLoading, user, router])
+
+  /* ============ AUTO SCROLL (DESKTOP + MOBILE) ============ */
+
+  useEffect(() => {
+    if (!isDragging) {
+      if (rafId.current) cancelAnimationFrame(rafId.current)
+      rafId.current = null
+      return
     }
-  }, [authLoading, user])
+
+    const step = () => {
+      if (pointerY.current == null) {
+        rafId.current = requestAnimationFrame(step)
+        return
+      }
+
+      const y = pointerY.current
+      const vh = window.innerHeight
+      let speed = 0
+
+      if (y < EDGE_MARGIN) {
+        const p = (EDGE_MARGIN - y) / EDGE_MARGIN
+        speed = -Math.ceil(p * MAX_SCROLL_SPEED)
+      } else if (y > vh - EDGE_MARGIN) {
+        const p = (y - (vh - EDGE_MARGIN)) / EDGE_MARGIN
+        speed = Math.ceil(p * MAX_SCROLL_SPEED)
+      }
+
+      if (speed !== 0) {
+        window.scrollBy({ top: speed, behavior: "auto" })
+      }
+
+      rafId.current = requestAnimationFrame(step)
+    }
+
+    rafId.current = requestAnimationFrame(step)
+
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current)
+    }
+  }, [isDragging])
 
   useEffect(() => {
-    if (user) fetchImages()
-  }, [user])
+    if (!isDragging) return
+
+    const onPointerMove = (e: PointerEvent) => {
+      pointerY.current = e.clientY
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      pointerY.current = e.touches[0]?.clientY ?? null
+    }
+
+    window.addEventListener("pointermove", onPointerMove)
+    window.addEventListener("touchmove", onTouchMove, { passive: false })
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove)
+      window.removeEventListener("touchmove", onTouchMove)
+    }
+  }, [isDragging])
+
+  /* ============ FETCH ============ */
 
   const fetchImages = async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from("gallery_images")
       .select("*")
+      .order("order_index", { ascending: true })
       .order("created_at", { ascending: false })
 
-    if (!error) setImages(data || [])
+    if (error) {
+      toast({ title: "Failed to load images", variant: "destructive" })
+      setImages([])
+    } else {
+      setImages(data || [])
+    }
     setLoading(false)
   }
 
+  useEffect(() => {
+    if (user) fetchImages()
+  }, [user])
+
+  /* ============ UPLOAD / DELETE / CAPTION / ORDER SAVE ============ */
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setSelectedFile(file)
-    const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result as string)
-    reader.readAsDataURL(file)
+    const f = e.target.files?.[0]
+    if (!f) return
+    setSelectedFile(f)
+    const r = new FileReader()
+    r.onloadend = () => setImagePreview(r.result as string)
+    r.readAsDataURL(f)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedFile) return
-
     try {
       setUploading(true)
-
       const ext = selectedFile.name.split(".").pop()
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-
-      const { error: uploadError } = await supabase.storage
-        .from("gallery")
-        .upload(fileName, selectedFile)
-
-      if (uploadError) throw uploadError
-
+      await supabase.storage.from("gallery").upload(fileName, selectedFile)
       const { data } = supabase.storage.from("gallery").getPublicUrl(fileName)
-
       await supabase.from("gallery_images").insert([
-        {
-          image_url: data.publicUrl,
-          image_path: fileName,
-          category: formData.category || null,
-          caption: formData.caption || null,
-          uploaded_by: "admin",
-        },
+        { image_url: data.publicUrl, image_path: fileName, category: formCategory || null, caption: formCaption || null },
       ])
-
-      toast({ title: "Image uploaded successfully" })
-
-      setFormData({ category: "", caption: "" })
+      toast({ title: "Image uploaded" })
       setSelectedFile(null)
       setImagePreview(null)
-
-      await fetchImages()
-    } catch (err) {
+      setFormCategory("")
+      setFormCaption("")
+      fetchImages()
+    } catch {
       toast({ title: "Upload failed", variant: "destructive" })
     } finally {
       setUploading(false)
     }
   }
 
-  const handleDelete = async (image: GalleryImage) => {
+  const handleDelete = async (img: GalleryImage) => {
     if (!confirm("Delete this image?")) return
-    const { id, image_path } = image
-    setDeletingId(id)
-
     try {
-      if (!id) throw new Error("Missing image id")
-
-      // Require explicit image_path for storage delete to avoid relying on public URLs
-      if (!image_path) {
-        console.error("Missing image_path for image:", image)
-        throw new Error("Missing image_path; cannot delete storage file safely")
-      }
-
-      // Delete from storage using image_path
-      const { error: storageError } = await supabase.storage.from("gallery").remove([image_path])
-      if (storageError) {
-        console.error("Storage delete failed:", storageError)
-        throw storageError
-      }
-
-      // Delete DB row by id only
-      const { data: deleteData, error: deleteError } = await supabase
-        .from("gallery_images")
-        .delete()
-        .eq("id", id)
-        .select()
-
-      if (deleteError) {
-        console.error("DB delete failed:", deleteError)
-        throw deleteError
-      }
-
-      const deletedCount = Array.isArray(deleteData as any) ? (deleteData as any).length : (deleteData ? 1 : 0)
-      if (deletedCount === 0) {
-        console.error("No rows deleted for id:", id)
-        throw new Error("No rows deleted from gallery_images")
-      }
-
-      // Re-fetch to ensure backend state is authoritative
-      await fetchImages()
-
-      toast({ title: "Image deleted successfully" })
-    } catch (err) {
-      console.error("Delete failed:", err)
-      toast({ title: "Delete failed", description: "Failed to delete the image. Please try again.", variant: "destructive" })
-    } finally {
-      setDeletingId(null)
+      if (img.image_path) await supabase.storage.from("gallery").remove([img.image_path])
+      await supabase.from("gallery_images").delete().eq("id", img.id)
+      toast({ title: "Image deleted" })
+      fetchImages()
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" })
     }
   }
 
-  if (authLoading || !user) {
-    return <div className="min-h-screen flex items-center justify-center">Loading…</div>
+  const startEditCaption = (img: GalleryImage) => {
+    setEditingId(img.id)
+    setEditingValue(img.caption || "")
   }
+
+  const saveCaption = async (img: GalleryImage) => {
+    try {
+      setSavingCaption(true)
+      await supabase.from("gallery_images").update({ caption: editingValue.slice(0, 60) }).eq("id", img.id)
+      setEditingId(null)
+      setEditingValue("")
+      fetchImages()
+      toast({ title: "Caption updated" })
+    } catch {
+      toast({ title: "Caption save failed", variant: "destructive" })
+    } finally {
+      setSavingCaption(false)
+    }
+  }
+
+  const saveOrder = async () => {
+    try {
+      setSavingOrder(true)
+      for (let i = 0; i < reorderItems.length; i++) {
+        await supabase.from("gallery_images").update({ order_index: i }).eq("id", reorderItems[i].id)
+      }
+      setReorderMode(false)
+      setReorderItems([])
+      fetchImages()
+      toast({ title: "Order saved" })
+    } catch {
+      toast({ title: "Order save failed", variant: "destructive" })
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  const filteredImages = selectedCategory === "All" ? images : images.filter((i) => i.category === selectedCategory)
+
+  if (authLoading || !user) return null
 
   return (
     <div className="min-h-screen">
       <Navbar />
 
-      <div className="py-12 bg-muted">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage gallery images</p>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex gap-4 mb-8 justify-between items-center">
-          <div className="flex gap-4">
-            <Link href="/admin-menu">
-              <Button variant="outline"><Package className="h-4 w-4 mr-2" />Menu</Button>
-            </Link>
-            <Link href="/admin-gallery-upload">
-              <Button><ImageIcon className="h-4 w-4 mr-2" />Gallery</Button>
-            </Link>
-          </div>
-          <Button
-            variant="destructive"
-            onClick={async () => {
-              await supabase.auth.signOut()
-              router.push("/admin/login")
-            }}
-          >
+        {/* HEADER */}
+        <div className="flex justify-between mb-6">
+          <Link href="/admin-menu">
+            <Button variant="outline"><Package className="h-4 w-4 mr-2" /> Menu</Button>
+          </Link>
+          <Button variant="destructive" onClick={async () => { await supabase.auth.signOut(); router.push("/admin/login") }}>
             Logout
           </Button>
         </div>
-        <Card className="mb-16">
-          <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input type="file" accept="image/*" onChange={handleFileChange} required />
 
-              {imagePreview && (
-                <img src={imagePreview} className="h-48 object-cover rounded-md" />
-              )}
+        {/* FILTER + REORDER */}
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mb-4">
+          <div className="flex flex-wrap gap-2">
+            {["All","Birthday Cakes","Anniversary Cakes","Custom Cakes","Cupcakes","Chocolates","Sweet Cravings"].map((c) => (
+              <button key={c} onClick={() => setSelectedCategory(c)}
+                className={`px-3 py-1.5 rounded-full text-sm ${selectedCategory === c ? "bg-primary text-white" : "bg-muted/20"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
 
-              <Select
-                value={formData.category}
-                onValueChange={(v) => setFormData({ ...formData, category: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Birthday Cakes">Birthday Cakes</SelectItem>
-                  <SelectItem value="Anniversary Cakes">Anniversary Cakes</SelectItem>
-                  <SelectItem value="Custom Cakes">Custom Cakes</SelectItem>
-                  <SelectItem value="Cupcakes">Cupcakes</SelectItem>
-                  <SelectItem value="Chocolates">Chocolates</SelectItem>
-                  <SelectItem value="Sweet Cravings">Sweet Cravings</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div>
-                <Textarea
-                  placeholder="Caption (max 60 characters)"
-                  value={formData.caption}
-                  onChange={(e) => setFormData({ ...formData, caption: e.target.value.slice(0, 60) })}
-                  maxLength={60}
-                />
-                <p className="text-xs text-muted-foreground mt-1">{formData.caption.length}/60</p>
-              </div>
-
-              <Button type="submit" disabled={uploading} className="w-full">
-                {uploading ? "Uploading…" : "Upload Image"}
+          {!reorderMode ? (
+            <Button size="sm" onClick={() => { setReorderMode(true); setReorderItems(filteredImages) }}>
+              Reorder
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveOrder} disabled={savingOrder}>Save</Button>
+              <Button size="sm" variant="outline" onClick={() => { setReorderMode(false); setReorderItems([]) }}>
+                Cancel
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
 
-        {loading ? (
-          <p className="text-center">Loading images…</p>
+        {/* GALLERY */}
+        {reorderMode ? (
+          <Reorder.Group
+            axis="y"
+            values={reorderItems}
+            onReorder={setReorderItems}
+            onPointerDown={() => setIsDragging(true)}
+            onPointerUp={() => setIsDragging(false)}
+            onTouchStart={() => setIsDragging(true)}
+            onTouchEnd={() => setIsDragging(false)}
+            className="space-y-3"
+          >
+            {reorderItems.map((img) => (
+              <Reorder.Item
+                key={img.id}
+                value={img}
+                style={{ touchAction: "none" }}
+                className="flex items-center gap-3 p-3 bg-background rounded-lg cursor-grab active:cursor-grabbing hover:bg-muted/40"
+              >
+                <GripVertical className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <img src={img.image_url} className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded shrink-0" />
+                <span className="truncate text-sm flex-1">{img.caption || "No caption"}</span>
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
         ) : (
-          <>
-            {/* Category filters (client-side only) */}
-            <div className="mb-4">
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {[
-                  "All",
-                  "Birthday Cakes",
-                  "Anniversary Cakes",
-                  "Custom Cakes",
-                  "Cupcakes",
-                  "Chocolates",
-                  "Sweet Cravings",
-                ].map((cat) => {
-                  const active = selectedCategory === cat
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={
-                        "whitespace-nowrap px-3 py-1.5 rounded-full text-sm transition-colors " +
-                        (active
-                          ? "bg-primary text-white shadow-sm"
-                          : "bg-muted/10 text-muted-foreground hover:bg-muted/20")
-                      }
-                    >
-                      {cat}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredImages.map((img) => (
+              <Card key={img.id} className="relative group">
+                <img src={img.image_url} className="h-36 sm:h-40 w-full object-cover" />
+                <CardContent className="p-2 space-y-2">
+                  {editingId === img.id ? (
+                    <>
+                      <input value={editingValue} onChange={(e) => setEditingValue(e.target.value.slice(0, 60))}
+                        className="w-full border rounded px-2 py-1 text-sm" />
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={() => saveCaption(img)}><Check className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}><X className="h-3 w-3" /></Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm line-clamp-2">{img.caption || "No caption"}</p>
+                      <Button size="sm" variant="outline" onClick={() => startEditCaption(img)}>Edit</Button>
+                    </>
+                  )}
+                </CardContent>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {(
-                selectedCategory === "All"
-                  ? images
-                  : images.filter((img) => img.category === selectedCategory)
-              ).map((img, i) => (
-                <div key={img.id ?? i} className="relative group">
-                  <Card>
-                    <img src={img.image_url} className="h-40 w-full object-cover" />
-                    <CardContent className="p-2">
-                      {img.caption && <p className="text-sm text-muted-foreground">{img.caption}</p>}
-                    </CardContent>
-                  </Card>
-
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    aria-label="Delete image"
-                    onClick={() => handleDelete(img)}
-                    disabled={deletingId === img.id}
-                    className={
-                      // Visible on small screens (mobile) by default, keep hover-reveal on larger screens
-                      "absolute top-2 right-2 h-8 w-8 p-0 rounded-full transition-opacity duration-200 ease-out opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    }
-                  >
-                    {deletingId === img.id ? (
-                      <span className="text-xs">...</span>
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </>
+                <Button size="icon" variant="destructive" onClick={() => handleDelete(img)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
