@@ -279,7 +279,7 @@ ${DOMAIN}/gallery/${image.id}
 
           {!loading && !error && filteredImages.length === 0 && (
             <div className="text-center py-20 text-muted-foreground">
-              More cakes coming soon ✨
+              Baking something special… 🍰
             </div>
           )}
 
@@ -337,20 +337,21 @@ ${DOMAIN}/gallery/${image.id}
                             e.stopPropagation()
                             toggleLike(key)
                           }}
-                          className="
-      absolute top-3 right-3 z-10
-      rounded-full bg-white/90 p-2 shadow
-      opacity-100 md:opacity-0 md:group-hover:opacity-100
-      transition
-    "
+                          className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/90 p-2 shadow md:opacity-0 md:group-hover:opacity-100 transition"
                         >
                           <Heart
-                            className={`h-5 w-5 ${liked
-                              ? "fill-rose-600 text-rose-600"
-                              : "text-gray-600"
+                            className={`h-5 w-5 ${liked ? "fill-rose-600 text-rose-600" : "text-gray-600"
                               }`}
                           />
+
+                          {/* subtle like count */}
+                          {liked && (
+                            <span className="text-xs text-gray-600 leading-none">
+                              1
+                            </span>
+                          )}
                         </button>
+
 
                         {/* DESKTOP CAPTION */}
                         {image.caption && (
