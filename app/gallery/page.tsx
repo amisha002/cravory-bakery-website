@@ -20,9 +20,13 @@ const AUTO_SCROLL_SPEED = 0.6         // constant luxury speed
 const AUTO_SCROLL_STOP_AT = 1.0      // stop at 70%
 const AUTO_SCROLL_COOLDOWN_HOURS = 6  // prod only
 
+
+
+
 /* ================= TYPES ================= */
 
 interface GalleryImage {
+  id: number
   image_url: string
   category: string
   caption: string
@@ -84,7 +88,7 @@ export default function GalleryPage() {
     try {
       const raw = localStorage.getItem("cravory_likes")
       if (raw) setLikes(JSON.parse(raw))
-    } catch {}
+    } catch { }
   }, [])
 
   /* ================= AUTO SCROLL EFFECT ================= */
@@ -106,21 +110,26 @@ export default function GalleryPage() {
     userInterrupted.current = false
 
     const stop = () => {
-  userInterrupted.current = true
-  hasAutoScrolled.current = true
+      userInterrupted.current = true
+      hasAutoScrolled.current = true
 
-  if (rafId.current) {
-    cancelAnimationFrame(rafId.current)
-    rafId.current = null
-  }
-}
+      // force final position to stop momentum
+      window.scrollTo({ top: window.scrollY, behavior: "auto" })
+
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current)
+        rafId.current = null
+      }
+    }
+
 
 
     window.addEventListener("wheel", stop, { passive: false })
-window.addEventListener("touchstart", stop, { passive: false })
-window.addEventListener("pointerdown", stop)
-window.addEventListener("keydown", stop)
+    window.addEventListener("touchstart", stop, { passive: false })
+    window.addEventListener("pointerdown", stop)
+    window.addEventListener("keydown", stop)
 
+    const isMobile = window.innerWidth <= 768
 
     const start = () => {
       const startY = window.scrollY
@@ -135,7 +144,9 @@ window.addEventListener("keydown", stop)
       const step = () => {
         if (userInterrupted.current) return
 
-        progress += AUTO_SCROLL_SPEED
+        const speed = isMobile ? AUTO_SCROLL_SPEED * 0.25 : AUTO_SCROLL_SPEED
+        progress += speed
+
         const t = Math.min(progress / 1000, 1)
 
         const y = startY + t * (maxScroll - startY)
@@ -158,19 +169,19 @@ window.addEventListener("keydown", stop)
 
     const timer = setTimeout(start, AUTO_SCROLL_DELAY)
 
-   return () => {
-  clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
 
-  if (rafId.current) {
-    cancelAnimationFrame(rafId.current)
-    rafId.current = null
-  }
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current)
+        rafId.current = null
+      }
 
-  window.removeEventListener("wheel", stop)
-  window.removeEventListener("touchstart", stop)
-  window.removeEventListener("pointerdown", stop)
-  window.removeEventListener("keydown", stop)
-}
+      window.removeEventListener("wheel", stop)
+      window.removeEventListener("touchstart", stop)
+      window.removeEventListener("pointerdown", stop)
+      window.removeEventListener("keydown", stop)
+    }
 
   }, [loading, images, selectedImage])
 
@@ -200,6 +211,24 @@ window.addEventListener("keydown", stop)
   }
 
   /* ================= RENDER ================= */
+  const openWhatsAppOrder = (image: GalleryImage) => {
+    const phone = "918420174756"
+    const DOMAIN = "https://cravory-bakery.vercel.app"
+
+    const message = `
+Hi CRAVORY 👋
+I’d like to order this cake 🍰
+
+Category: ${image.category || "Cake"}
+Description: ${image.caption || "—"}
+
+View cake:
+${DOMAIN}/gallery/${image.id}
+`.trim()
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    window.open(url, "_blank")
+  }
 
   return (
     <div className="relative z-10 min-h-screen">
@@ -225,11 +254,10 @@ window.addEventListener("keydown", stop)
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  selectedCategory === category
-                    ? "bg-primary text-primary-foreground shadow"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${selectedCategory === category
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
               >
                 {category}
               </button>
@@ -277,26 +305,50 @@ window.addEventListener("keydown", stop)
                       className="group relative cursor-pointer overflow-hidden border-0 bg-background/60 backdrop-blur hover:shadow-xl transition"
                     >
                       <div className="aspect-square relative overflow-hidden">
+
                         <img
                           src={image.image_url}
                           alt={image.caption || "Gallery image"}
                           className="w-full h-full object-cover"
                         />
 
-                        {/* ❤️ LIKE */}
+                        {/* 🟢 WHATSAPP CTA – TOP LEFT */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openWhatsAppOrder(image)
+                          }}
+                          className="
+                            absolute top-3 left-3 z-10
+                            px-3 py-1.5 rounded-full
+                            bg-green-600/90 text-white text-xs font-medium
+                            cursor-pointer
+                            opacity-100 md:opacity-0 md:group-hover:opacity-100
+                            transition-opacity duration-200 shadow-sm
+                            flex items-center gap-1.5
+                          "
+                        >
+                          <span>Order on WhatsApp</span>
+                        </div>
+
+                        {/* ❤️ LIKE – TOP RIGHT */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             toggleLike(key)
                           }}
-                          className="absolute top-3 right-3 z-10 rounded-full bg-white/90 p-2 shadow md:opacity-0 md:group-hover:opacity-100 transition"
+                          className="
+      absolute top-3 right-3 z-10
+      rounded-full bg-white/90 p-2 shadow
+      opacity-100 md:opacity-0 md:group-hover:opacity-100
+      transition
+    "
                         >
                           <Heart
-                            className={`h-5 w-5 ${
-                              liked
-                                ? "fill-rose-600 text-rose-600"
-                                : "text-gray-600"
-                            }`}
+                            className={`h-5 w-5 ${liked
+                              ? "fill-rose-600 text-rose-600"
+                              : "text-gray-600"
+                              }`}
                           />
                         </button>
 
@@ -310,7 +362,9 @@ window.addEventListener("keydown", stop)
                             </div>
                           </div>
                         )}
+
                       </div>
+
 
                       {/* MOBILE CAPTION */}
                       {image.caption && (
@@ -360,13 +414,21 @@ window.addEventListener("keydown", stop)
                   src={selectedImage.image_url}
                   className="w-full max-h-[80vh] object-contain"
                 />
-                {selectedImage.caption && (
-                  <div className="p-6 border-t">
+                <div className="p-6 border-t space-y-4">
+                  {selectedImage.caption && (
                     <p className="text-lg font-medium">
                       {selectedImage.caption}
                     </p>
-                  </div>
-                )}
+                  )}
+
+                  <Button
+                    className="w-full py-6 text-base"
+                    onClick={() => openWhatsAppOrder(selectedImage)}
+                  >
+                    Order this cake on WhatsApp
+                  </Button>
+                </div>
+
               </div>
             </motion.div>
           </motion.div>
