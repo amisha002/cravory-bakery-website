@@ -45,8 +45,8 @@ export default function GalleryPage() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null)
 
   // NEW STATE STRUCTURE
-  const [likedByUser, setLikedByUser] = useState<Record<number, boolean>>({})
-  const [likeCounts, setLikeCounts] = useState<Record<number, number>>({})
+  const [likedByUser, setLikedByUser] = useState<Record<string, boolean>>({})
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [userId, setUserId] = useState<string>("")
 
   /* auto scroll refs */
@@ -254,7 +254,7 @@ export default function GalleryPage() {
       : images.filter((img) => img.category === selectedCategory)
 
   // STRICT TOGGLE LIKE IMPLEMENTATION
-  const toggleLike = async (imageId: number) => {
+  const toggleLike = async (imageId: string) => {
     if (!userId) return
 
     const alreadyLiked = likedByUser[imageId]
