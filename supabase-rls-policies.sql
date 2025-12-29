@@ -32,7 +32,23 @@ FOR INSERT
 TO public
 WITH CHECK (true);
 
+-- Enable RLS on gallery_likes table
+alter table gallery_likes enable row level security;
 
+-- Allow public read on gallery_likes
+create policy "Public read"
+on gallery_likes
+for select
+using (true);
 
+-- Allow public insert on gallery_likes
+create policy "Public insert"
+on gallery_likes
+for insert
+with check (true);
 
-
+-- Allow public delete on gallery_likes (needed for unliking)
+create policy "Public delete"
+on gallery_likes
+for delete
+using (true);

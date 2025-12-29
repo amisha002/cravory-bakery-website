@@ -88,40 +88,37 @@ export default function GalleryPage() {
   /* ================= LOAD LIKES & ID ================= */
 
   useEffect(() => {
-    try {
-      // 1. Get or create User ID
-      let currentUserId = localStorage.getItem("cravory_user_id")
-      if (!currentUserId) {
-        currentUserId = `user_${Date.now()}_${Math.random().toString(36).slice(2)}`
-        localStorage.setItem("cravory_user_id", currentUserId)
-      }
-      setUserId(currentUserId)
+    // 1. Get or create User ID (keep anonymous identity)
+    let currentUserId = localStorage.getItem("cravory_user_id")
+    if (!currentUserId) {
+      currentUserId = `user_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      localStorage.setItem("cravory_user_id", currentUserId)
+    }
+    setUserId(currentUserId)
 
-      // 2. Load & Migrate Likes
-      const raw = localStorage.getItem("cravory_likes")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        let migrated = false
-        const nextLikes: Record<string, boolean> = {}
+    // 2. Fetch Likes from Supabase
+    const fetchLikes = async () => {
+      if (!currentUserId) return
 
-        Object.keys(parsed).forEach((key) => {
-          if (key.startsWith("user_")) {
-            // Already scoped
-            nextLikes[key] = parsed[key]
-          } else {
-            // Migrate legacy key
-            const newKey = `${currentUserId}-${key}`
-            nextLikes[newKey] = parsed[key]
-            migrated = true
-          }
+      const { data } = await supabase
+        .from("gallery_likes")
+        .select("image_id")
+        .eq("user_id", currentUserId)
+
+      if (data) {
+        const remoteLikes: Record<string, boolean> = {}
+        data.forEach((row: any) => {
+          // Key format: userId-imageId (consistent with previous helper, although now we assume ID based)
+          // Wait, previous helper `getLikeKey` used `imageId`. Code uses `userId-image.id`.
+          // Let's stick to that map key for state.
+          const key = `${currentUserId}-${row.image_id}`
+          remoteLikes[key] = true
         })
-
-        if (migrated) {
-          localStorage.setItem("cravory_likes", JSON.stringify(nextLikes))
-        }
-        setLikes(nextLikes)
+        setLikes(remoteLikes)
       }
-    } catch { }
+    }
+
+    fetchLikes()
   }, [])
 
   /* ================= AUTO SCROLL EFFECT ================= */
@@ -238,12 +235,30 @@ export default function GalleryPage() {
       ? images
       : images.filter((img) => img.category === selectedCategory)
 
-  const toggleLike = (key: string) => {
+  const toggleLike = async (key: string, imageId: number) => {
+    // Optimistic Update
     setLikes((prev) => {
-      const next = { ...prev, [key]: !prev[key] }
-      localStorage.setItem("cravory_likes", JSON.stringify(next))
+      const isLiked = !!prev[key]
+      const next = { ...prev, [key]: !isLiked }
       return next
     })
+
+    if (!userId) return
+
+    const isLiked = !!likes[key]
+
+    if (isLiked) {
+      // Unlike -> Delete
+      await supabase
+        .from("gallery_likes")
+        .delete()
+        .match({ user_id: userId, image_id: imageId })
+    } else {
+      // Like -> Insert
+      await supabase
+        .from("gallery_likes")
+        .insert({ user_id: userId, image_id: imageId })
+    }
   }
 
   /* ================= RENDER ================= */
@@ -377,7 +392,7 @@ ${DOMAIN}/gallery/${image.id}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (userId) toggleLike(key)
+                            if (userId) toggleLike(key, image.id)
                           }}
                           className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/90 p-2 shadow md:opacity-0 md:group-hover:opacity-100 transition"
                         >
@@ -387,11 +402,7 @@ ${DOMAIN}/gallery/${image.id}
                           />
 
                           {/* subtle like count */}
-                          {liked && (
-                            <span className="text-xs text-gray-600 leading-none">
-                              1
-                            </span>
-                          )}
+
                         </button>
 
 
@@ -465,7 +476,7 @@ ${DOMAIN}/gallery/${image.id}
                     const key = getLikeKey(selectedImage)
 
 
-                    if (userId) toggleLike(key)
+                    if (userId) toggleLike(key, selectedImage.id)
                   }}
                   className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-white/90 p-2.5 shadow transition"
                 >
