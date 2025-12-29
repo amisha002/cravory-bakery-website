@@ -26,7 +26,7 @@ const AUTO_SCROLL_COOLDOWN_HOURS = 6  // prod only
 /* ================= TYPES ================= */
 
 interface GalleryImage {
-  id: number
+  id: string
   image_url: string
   category: string
   caption: string
