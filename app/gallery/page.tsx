@@ -43,7 +43,10 @@ export default function GalleryPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null)
-  const [likes, setLikes] = useState<Record<string, boolean>>({})
+
+  // NEW STATE STRUCTURE
+  const [likedByUser, setLikedByUser] = useState<Record<number, boolean>>({})
+  const [likeCounts, setLikeCounts] = useState<Record<number, number>>({})
   const [userId, setUserId] = useState<string>("")
 
   /* auto scroll refs */
@@ -85,10 +88,10 @@ export default function GalleryPage() {
     fetchImages()
   }, [])
 
-  /* ================= LOAD LIKES & ID ================= */
+  /* ================= LOAD LIKES (USER + COUNTS) ================= */
 
   useEffect(() => {
-    // 1. Get or create User ID (keep anonymous identity)
+    // 1. Get or create User ID
     let currentUserId = localStorage.getItem("cravory_user_id")
     if (!currentUserId) {
       currentUserId = `user_${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -96,29 +99,44 @@ export default function GalleryPage() {
     }
     setUserId(currentUserId)
 
-    // 2. Fetch Likes from Supabase
-    const fetchLikes = async () => {
-      if (!currentUserId) return
+    const fetchLikestData = async () => {
+      // Fetch User Likes
+      if (currentUserId) {
+        const { data: userData } = await supabase
+          .from("gallery_likes")
+          .select("image_id")
+          .eq("user_id", currentUserId)
 
-      const { data } = await supabase
-        .from("gallery_likes")
-        .select("image_id")
-        .eq("user_id", currentUserId)
-
-      if (data) {
-        const remoteLikes: Record<string, boolean> = {}
-        data.forEach((row: any) => {
-          // Key format: userId-imageId (consistent with previous helper, although now we assume ID based)
-          // Wait, previous helper `getLikeKey` used `imageId`. Code uses `userId-image.id`.
-          // Let's stick to that map key for state.
-          const key = `${currentUserId}-${row.image_id}`
-          remoteLikes[key] = true
-        })
-        setLikes(remoteLikes)
+        if (userData) {
+          const userMap: Record<number, boolean> = {}
+          userData.forEach((row: any) => {
+            userMap[row.image_id] = true
+          })
+          setLikedByUser(userMap)
+        }
       }
+
+      // Fetch ALL Likes for Counts (Aggregation)
+      const { data: countData, error } = await supabase
+        .from("gallery_like_counts")
+        .select("image_id, count")
+
+      if (error) {
+        console.error("Like count error", error)
+      }
+
+      if (countData) {
+        const counts: Record<number, number> = {}
+        countData.forEach((row: any) => {
+          counts[row.image_id] = row.count
+        })
+        setLikeCounts(counts)
+      }
+
+
     }
 
-    fetchLikes()
+    fetchLikestData()
   }, [])
 
   /* ================= AUTO SCROLL EFFECT ================= */
@@ -155,7 +173,7 @@ export default function GalleryPage() {
 
 
     window.addEventListener("wheel", stop, { passive: false })
-    window.addEventListener("touchstart", stop, { passive: false })
+    window.addEventListener("touchmove", stop, { passive: false })
     window.addEventListener("pointerdown", stop)
     window.addEventListener("keydown", stop)
 
@@ -178,7 +196,7 @@ export default function GalleryPage() {
         const speed = isMobile ? AUTO_SCROLL_SPEED * 0.8 : AUTO_SCROLL_SPEED
         progress += speed
 
-        const divisor = isMobile ? 350 : 1000
+        const divisor = isMobile ? 500 : 1000
         const t = Math.min(progress / divisor, 1)
 
 
@@ -235,29 +253,42 @@ export default function GalleryPage() {
       ? images
       : images.filter((img) => img.category === selectedCategory)
 
-  const toggleLike = async (key: string, imageId: number) => {
-    // Optimistic Update
-    setLikes((prev) => {
-      const isLiked = !!prev[key]
-      const next = { ...prev, [key]: !isLiked }
-      return next
-    })
-
+  // STRICT TOGGLE LIKE IMPLEMENTATION
+  const toggleLike = async (imageId: number) => {
     if (!userId) return
 
-    const isLiked = !!likes[key]
+    const alreadyLiked = likedByUser[imageId]
 
-    if (isLiked) {
-      // Unlike -> Delete
-      await supabase
-        .from("gallery_likes")
-        .delete()
-        .match({ user_id: userId, image_id: imageId })
-    } else {
-      // Like -> Insert
-      await supabase
-        .from("gallery_likes")
-        .insert({ user_id: userId, image_id: imageId })
+    // Optimistic UI
+    setLikedByUser(prev => ({ ...prev, [imageId]: !alreadyLiked }))
+    setLikeCounts(prev => ({
+      ...prev,
+      [imageId]: Math.max(0, (prev[imageId] || 0) + (alreadyLiked ? -1 : 1))
+    }))
+
+    try {
+      if (alreadyLiked) {
+        await supabase
+          .from("gallery_likes")
+          .delete()
+          .match({ user_id: userId, image_id: imageId })
+      } else {
+        await supabase
+          .from("gallery_likes")
+          .insert({ user_id: userId, image_id: imageId })
+      }
+    } catch (err) {
+      console.error("Like toggle failed", err)
+
+      // Rollback UI if DB fails
+      setLikedByUser(prev => ({ ...prev, [imageId]: alreadyLiked }))
+      setLikeCounts(prev => ({
+        ...prev,
+        [imageId]: Math.max(
+          0,
+          (prev[imageId] || 0) + (alreadyLiked ? 1 : -1)
+        )
+      }))
     }
   }
 
@@ -279,10 +310,6 @@ ${DOMAIN}/gallery/${image.id}
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     window.open(url, "_blank")
-  }
-  const getLikeKey = (image: GalleryImage) => {
-    if (!userId) return ""
-    return `${userId}-${image.id}`
   }
 
   return (
@@ -350,10 +377,8 @@ ${DOMAIN}/gallery/${image.id}
                 transition={{ duration: 0.35, ease: "easeOut" }}
               >
                 {filteredImages.map((image) => {
-                  // SCOPED KEY
-                  const key = getLikeKey(image)
-                  const liked = !!likes[key]
-
+                  const isLiked = !!likedByUser[image.id]
+                  const count = likeCounts[image.id] || 0
 
                   return (
                     <Card
@@ -392,17 +417,21 @@ ${DOMAIN}/gallery/${image.id}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (userId) toggleLike(key, image.id)
+                            toggleLike(image.id)
                           }}
                           className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/90 p-2 shadow md:opacity-0 md:group-hover:opacity-100 transition"
                         >
                           <Heart
-                            className={`h-5 w-5 ${liked ? "fill-rose-600 text-rose-600" : "text-gray-600"
+                            className={`h-5 w-5 ${isLiked ? "fill-rose-600 text-rose-600" : "text-gray-600"
                               }`}
                           />
 
-                          {/* subtle like count */}
-
+                          {/* subtle like count: only if > 0 */}
+                          {count > 0 && (
+                            <span className="text-xs text-gray-600 leading-none">
+                              {count}
+                            </span>
+                          )}
                         </button>
 
 
@@ -473,25 +502,21 @@ ${DOMAIN}/gallery/${image.id}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    const key = getLikeKey(selectedImage)
-
-
-                    if (userId) toggleLike(key, selectedImage.id)
+                    toggleLike(selectedImage.id)
                   }}
                   className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-white/90 p-2.5 shadow transition"
                 >
                   <Heart
-                    className={`h-6 w-6 ${likes[userId ? `${userId}-${selectedImage.image_url}-${selectedImage.created_at}` : `${selectedImage.image_url}-${selectedImage.created_at}`]
+                    className={`h-6 w-6 ${likedByUser[selectedImage.id]
                       ? "fill-rose-600 text-rose-600"
                       : "text-gray-600"
                       }`}
                   />
-                  {likes[getLikeKey(selectedImage)] && (
+                  {likeCounts[selectedImage.id] > 0 && (
                     <span className="text-sm text-gray-600 font-medium leading-none">
-                      1
+                      {likeCounts[selectedImage.id]}
                     </span>
                   )}
-
                 </button>
                 <div className="p-6 border-t space-y-4">
                   {selectedImage.caption && (
