@@ -35,6 +35,8 @@ interface GalleryImage {
 
 /* ================= PAGE ================= */
 
+/* ================= PAGE ================= */
+
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,6 +44,7 @@ export default function GalleryPage() {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null)
   const [likes, setLikes] = useState<Record<string, boolean>>({})
+  const [userId, setUserId] = useState<string>("")
 
   /* auto scroll refs */
   const rafId = useRef<number | null>(null)
@@ -82,12 +85,42 @@ export default function GalleryPage() {
     fetchImages()
   }, [])
 
-  /* ================= LOAD LIKES ================= */
+  /* ================= LOAD LIKES & ID ================= */
 
   useEffect(() => {
     try {
+      // 1. Get or create User ID
+      let currentUserId = localStorage.getItem("cravory_user_id")
+      if (!currentUserId) {
+        currentUserId = `user_${Date.now()}_${Math.random().toString(36).slice(2)}`
+        localStorage.setItem("cravory_user_id", currentUserId)
+      }
+      setUserId(currentUserId)
+
+      // 2. Load & Migrate Likes
       const raw = localStorage.getItem("cravory_likes")
-      if (raw) setLikes(JSON.parse(raw))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        let migrated = false
+        const nextLikes: Record<string, boolean> = {}
+
+        Object.keys(parsed).forEach((key) => {
+          if (key.startsWith("user_")) {
+            // Already scoped
+            nextLikes[key] = parsed[key]
+          } else {
+            // Migrate legacy key
+            const newKey = `${currentUserId}-${key}`
+            nextLikes[newKey] = parsed[key]
+            migrated = true
+          }
+        })
+
+        if (migrated) {
+          localStorage.setItem("cravory_likes", JSON.stringify(nextLikes))
+        }
+        setLikes(nextLikes)
+      }
     } catch { }
   }, [])
 
@@ -144,10 +177,13 @@ export default function GalleryPage() {
       const step = () => {
         if (userInterrupted.current) return
 
-        const speed = isMobile ? AUTO_SCROLL_SPEED * 0.25 : AUTO_SCROLL_SPEED
+        // UPDATED MATH: visible speed on mobile
+        const speed = isMobile ? AUTO_SCROLL_SPEED * 0.8 : AUTO_SCROLL_SPEED
         progress += speed
 
-        const t = Math.min(progress / 1000, 1)
+        const divisor = isMobile ? 350 : 1000
+        const t = Math.min(progress / divisor, 1)
+
 
         const y = startY + t * (maxScroll - startY)
         window.scrollTo({ top: y, behavior: "auto" })
@@ -229,6 +265,10 @@ ${DOMAIN}/gallery/${image.id}
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     window.open(url, "_blank")
   }
+  const getLikeKey = (image: GalleryImage) => {
+    if (!userId) return ""
+    return `${userId}-${image.id}`
+  }
 
   return (
     <div className="relative z-10 min-h-screen">
@@ -295,12 +335,14 @@ ${DOMAIN}/gallery/${image.id}
                 transition={{ duration: 0.35, ease: "easeOut" }}
               >
                 {filteredImages.map((image) => {
-                  const key = `${image.image_url}-${image.created_at}`
-                  const liked = likes[key]
+                  // SCOPED KEY
+                  const key = getLikeKey(image)
+                  const liked = !!likes[key]
+
 
                   return (
                     <Card
-                      key={key}
+                      key={image.id}
                       onClick={() => setSelectedImage(image)}
                       className="group relative cursor-pointer overflow-hidden border-0 bg-background/60 backdrop-blur hover:shadow-xl transition"
                     >
@@ -335,7 +377,7 @@ ${DOMAIN}/gallery/${image.id}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            toggleLike(key)
+                            if (userId) toggleLike(key)
                           }}
                           className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/90 p-2 shadow md:opacity-0 md:group-hover:opacity-100 transition"
                         >
@@ -420,22 +462,25 @@ ${DOMAIN}/gallery/${image.id}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    const key = `${selectedImage.image_url}-${selectedImage.created_at}`
-                    toggleLike(key)
+                    const key = getLikeKey(selectedImage)
+
+
+                    if (userId) toggleLike(key)
                   }}
                   className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-white/90 p-2.5 shadow transition"
                 >
                   <Heart
-                    className={`h-6 w-6 ${likes[`${selectedImage.image_url}-${selectedImage.created_at}`]
+                    className={`h-6 w-6 ${likes[userId ? `${userId}-${selectedImage.image_url}-${selectedImage.created_at}` : `${selectedImage.image_url}-${selectedImage.created_at}`]
                       ? "fill-rose-600 text-rose-600"
                       : "text-gray-600"
                       }`}
                   />
-                  {likes[`${selectedImage.image_url}-${selectedImage.created_at}`] && (
+                  {likes[getLikeKey(selectedImage)] && (
                     <span className="text-sm text-gray-600 font-medium leading-none">
                       1
                     </span>
                   )}
+
                 </button>
                 <div className="p-6 border-t space-y-4">
                   {selectedImage.caption && (
