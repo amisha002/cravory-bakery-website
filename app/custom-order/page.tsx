@@ -107,7 +107,8 @@ Message on Cake: ${formData.message}
 Additional Notes: ${formData.additionalNotes}
 
 Reference Image:
-https://cravory-bakery.vercel.app/custom-order/preview?img=${encodeURIComponent(uploadedImageUrl || "")}
+${uploadedImageUrl || "Not provided"}
+
 
 Please let me know the price & availability.
 `.trim()
