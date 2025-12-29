@@ -281,7 +281,7 @@ export default function AdminGalleryUploadPage() {
         {/* FILTER + REORDER */}
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mb-4">
           <div className="flex flex-wrap gap-2">
-            {["All","Birthday Cakes","Anniversary Cakes","Custom Cakes","Cupcakes","Chocolates","Sweet Cravings"].map((c) => (
+            {["All", "Birthday Cakes", "Anniversary Cakes", "Custom Cakes", "Cupcakes", "Chocolates", "Sweet Cravings"].map((c) => (
               <button key={c} onClick={() => setSelectedCategory(c)}
                 className={`px-3 py-1.5 rounded-full text-sm ${selectedCategory === c ? "bg-primary text-white" : "bg-muted/20"}`}>
                 {c}

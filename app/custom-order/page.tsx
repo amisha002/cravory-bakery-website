@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { supabase } from "@/lib/supabase"
 
 import { useState } from "react"
 import { motion } from "framer-motion"
@@ -26,19 +27,51 @@ export default function CustomOrderPage() {
     message: "",
     additionalNotes: "",
   })
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+
   const { toast } = useToast()
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    setUploading(true)
+
+    // 1️⃣ Preview (for UI only)
     const reader = new FileReader()
     reader.onloadend = () => {
-      setUploadedImage(reader.result as string)
+      setUploadedImagePreview(reader.result as string)
     }
     reader.readAsDataURL(file)
+
+    // 2️⃣ Upload to Supabase Storage
+    const fileName = `custom-${Date.now()}-${file.name}`
+
+    const { error } = await supabase.storage
+      .from("custom-orders")
+      .upload(fileName, file)
+
+    if (error) {
+      setUploading(false)
+      toast({
+        title: "Image upload failed",
+        description: "Please try again",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 3️⃣ Get PUBLIC URL
+    const { data } = supabase.storage
+      .from("custom-orders")
+      .getPublicUrl(fileName)
+
+    setUploadedImageUrl(data.publicUrl)
+    setUploading(false)
   }
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,23 +83,40 @@ export default function CustomOrderPage() {
       })
       return
     }
+    // 🔒 STEP 6 — Ensure image upload is complete before WhatsApp
+    if (uploadedImagePreview && !uploadedImageUrl) {
+      toast({
+        title: "Image still uploading",
+        description: "Please wait a moment before submitting",
+        variant: "destructive",
+      })
+      return
+    }
 
     const orderDetails = `
-Hi! I'd like to place a customized order:%0A%0A
-Name: ${formData.name}%0A
-Phone: ${formData.phone}%0A
-Cake Type: ${formData.cakeType}%0A
-Weight: ${formData.weight}%0A
-Flavour: ${formData.flavour}%0A
-Occasion: ${formData.occasion}%0A
-Message on Cake: ${formData.message}%0A
-Additional Notes: ${formData.additionalNotes}%0A
-${uploadedImage ? "Reference Image: Attached" : ""}
-    `.trim()
+Hi CRAVORY 👋
+I’d like to place a customized cake order 🎂
 
-    window.open(`https://wa.me/918420174756?text=${orderDetails}`, "_blank")
+Name: ${formData.name}
+Phone: ${formData.phone}
+Cake Type: ${formData.cakeType}
+Weight: ${formData.weight}
+Flavour: ${formData.flavour}
+Occasion: ${formData.occasion}
+Message on Cake: ${formData.message}
+Additional Notes: ${formData.additionalNotes}
+
+Reference Image:
+https://cravory-bakery.vercel.app/custom-order/preview?img=${encodeURIComponent(uploadedImageUrl || "")}
+
+Please let me know the price & availability.
+`.trim()
+
+    window.open(
+      `https://wa.me/918420174756?text=${encodeURIComponent(orderDetails)}`,
+      "_blank"
+    )
   }
-
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -201,190 +251,196 @@ ${uploadedImage ? "Reference Image: Attached" : ""}
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Reference Design Image (Optional)</Label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-all hover:scale-105 duration-300">
-                    {uploadedImage ? (
-                      <div className="relative inline-block animate-fade-in">
-                        <img
-                          src={uploadedImage || "/placeholder.svg"}
-                          alt="Reference design"
-                          className="max-h-48 rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="destructive"
-                          className="absolute -top-2 -right-2 rounded-full hover:scale-110 transition-transform"
-                          onClick={() => setUploadedImage(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                      <div className="space-y-2">
+                        <Label>Reference Design Image (Optional)</Label>
+                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-all hover:scale-105 duration-300">
+                          {uploadedImagePreview ? (
+                            <div className="relative inline-block animate-fade-in">
+                              <img
+                                src={uploadedImagePreview}
+                                alt="Reference design"
+                                className="max-h-48 rounded-lg"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="absolute -top-2 -right-2 rounded-full"
+                                onClick={() => {
+                                  setUploadedImagePreview(null)
+                                  setUploadedImageUrl(null)
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+
+                            <label htmlFor="design-upload" className="cursor-pointer">
+                              <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground animate-bounce-slow" />
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Upload a reference image for your customized cake
+                              </p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="rounded-full bg-transparent hover:scale-105 transition-transform"
+                                asChild
+                              >
+                                <span>Choose Image</span>
+                              </Button>
+                              <input
+                                id="design-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageUpload}
+                              />
+                            </label>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <label htmlFor="design-upload" className="cursor-pointer">
-                        <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground animate-bounce-slow" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Upload a reference image for your customized cake
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-full bg-transparent hover:scale-105 transition-transform"
-                          asChild
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Your Name *</Label>
+                          <Input
+                            id="name"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="Enter your name"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone Number *</Label>
+                          <Input
+                            id="phone"
+                            required
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="Enter your phone"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cakeType">Cake Type *</Label>
+                        <Select
+                          value={formData.cakeType}
+                          onValueChange={(value) => setFormData({ ...formData, cakeType: value })}
                         >
-                          <span>Choose Image</span>
-                        </Button>
-                        <input
-                          id="design-upload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageUpload}
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select cake type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Regular Cake">Regular Cake</SelectItem>
+                            <SelectItem value="Photo Cake">Photo Cake</SelectItem>
+                            <SelectItem value="Tier Cake">Tier Cake</SelectItem>
+                            <SelectItem value="Designer Cake">Designer Cake</SelectItem>
+                            <SelectItem value="Fondant Cake">Fondant Cake</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="weight">Weight *</Label>
+                          <Select
+                            value={formData.weight}
+                            onValueChange={(value) => setFormData({ ...formData, weight: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select weight" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Half Pound">Half Pound</SelectItem>
+                              <SelectItem value="1 Pound">1 Pound</SelectItem>
+                              <SelectItem value="1.5 Pounds">1.5 Pounds</SelectItem>
+                              <SelectItem value="2 Pounds">2 Pounds</SelectItem>
+                              <SelectItem value="3 Pounds">3 Pounds</SelectItem>
+                              <SelectItem value="4 Pounds">4 Pounds</SelectItem>
+                              <SelectItem value="5+ Pounds">5+ Pounds</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="flavour">Flavour *</Label>
+                          <Select
+                            value={formData.flavour}
+                            onValueChange={(value) => setFormData({ ...formData, flavour: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select flavour" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Vanilla">Vanilla</SelectItem>
+                              <SelectItem value="Chocolate">Chocolate</SelectItem>
+                              <SelectItem value="Strawberry">Strawberry</SelectItem>
+                              <SelectItem value="Pineapple">Pineapple</SelectItem>
+                              <SelectItem value="Black Forest">Black Forest</SelectItem>
+                              <SelectItem value="White Forest">White Forest</SelectItem>
+                              <SelectItem value="Butterscotch">Butterscotch</SelectItem>
+                              <SelectItem value="Red Velvet">Red Velvet</SelectItem>
+                              <SelectItem value="Oreo">Oreo</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="occasion">Occasion</Label>
+                        <Input
+                          id="occasion"
+                          value={formData.occasion}
+                          onChange={(e) => setFormData({ ...formData, occasion: e.target.value })}
+                          placeholder="Birthday, Anniversary, Wedding, etc."
                         />
-                      </label>
-                    )}
-                  </div>
-                </div>
+                      </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Your Name *</Label>
-                    <Input
-                      id="name"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter your name"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="message">Message on Cake</Label>
+                        <Input
+                          id="message"
+                          value={formData.message}
+                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                          placeholder="Happy Birthday, Congratulations, etc."
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      required
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Enter your phone"
-                    />
-                  </div>
-                </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="additionalNotes">Additional Notes / Design Details</Label>
+                        <Textarea
+                          id="additionalNotes"
+                          value={formData.additionalNotes}
+                          onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
+                          placeholder="Any specific design requirements, color preferences, or special instructions..."
+                          rows={4}
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cakeType">Cake Type *</Label>
-                  <Select
-                    value={formData.cakeType}
-                    onValueChange={(value) => setFormData({ ...formData, cakeType: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select cake type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Regular Cake">Regular Cake</SelectItem>
-                      <SelectItem value="Photo Cake">Photo Cake</SelectItem>
-                      <SelectItem value="Tier Cake">Tier Cake</SelectItem>
-                      <SelectItem value="Designer Cake">Designer Cake</SelectItem>
-                      <SelectItem value="Fondant Cake">Fondant Cake</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={uploading}
+                        className="w-full rounded-full gap-2 hover:scale-105 transition-transform disabled:opacity-50"
+                      >
+                        <MessageCircle className="h-5 w-5" />
+                        {uploading ? "Uploading image..." : "Submit Order via WhatsApp"}
+                      </Button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="weight">Weight *</Label>
-                    <Select
-                      value={formData.weight}
-                      onValueChange={(value) => setFormData({ ...formData, weight: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select weight" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Half Pound">Half Pound</SelectItem>
-                        <SelectItem value="1 Pound">1 Pound</SelectItem>
-                        <SelectItem value="1.5 Pounds">1.5 Pounds</SelectItem>
-                        <SelectItem value="2 Pounds">2 Pounds</SelectItem>
-                        <SelectItem value="3 Pounds">3 Pounds</SelectItem>
-                        <SelectItem value="4 Pounds">4 Pounds</SelectItem>
-                        <SelectItem value="5+ Pounds">5+ Pounds</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="flavour">Flavour *</Label>
-                    <Select
-                      value={formData.flavour}
-                      onValueChange={(value) => setFormData({ ...formData, flavour: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select flavour" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Vanilla">Vanilla</SelectItem>
-                        <SelectItem value="Chocolate">Chocolate</SelectItem>
-                        <SelectItem value="Strawberry">Strawberry</SelectItem>
-                        <SelectItem value="Pineapple">Pineapple</SelectItem>
-                        <SelectItem value="Black Forest">Black Forest</SelectItem>
-                        <SelectItem value="White Forest">White Forest</SelectItem>
-                        <SelectItem value="Butterscotch">Butterscotch</SelectItem>
-                        <SelectItem value="Red Velvet">Red Velvet</SelectItem>
-                        <SelectItem value="Oreo">Oreo</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="occasion">Occasion</Label>
-                  <Input
-                    id="occasion"
-                    value={formData.occasion}
-                    onChange={(e) => setFormData({ ...formData, occasion: e.target.value })}
-                    placeholder="Birthday, Anniversary, Wedding, etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message on Cake</Label>
-                  <Input
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Happy Birthday, Congratulations, etc."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="additionalNotes">Additional Notes / Design Details</Label>
-                  <Textarea
-                    id="additionalNotes"
-                    value={formData.additionalNotes}
-                    onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
-                    placeholder="Any specific design requirements, color preferences, or special instructions..."
-                    rows={4}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full rounded-full gap-2 hover:scale-105 transition-transform"
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  Submit Order via WhatsApp
-                </Button>
-
-                <p className="text-sm text-center text-muted-foreground">
-                  You'll be redirected to WhatsApp to finalize your customized order
-                </p>
-              </form>
-            </CardContent>
-          </Card>
-          </motion.div>
+                      <p className="text-sm text-center text-muted-foreground">
+                        You'll be redirected to WhatsApp to finalize your customized order
+                      </p>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </div>
         </div>
