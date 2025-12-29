@@ -16,11 +16,13 @@ export const metadata: Metadata = {
     },
 }
 
-export default function PreviewPage({
-    searchParams,
-}: {
-    searchParams: { img?: string }
-}) {
+type Props = {
+    searchParams: {
+        img?: string
+    }
+}
+
+export default function PreviewPage({ searchParams }: Props) {
     const imageUrl = searchParams?.img
 
     return (
@@ -36,7 +38,7 @@ export default function PreviewPage({
         >
             {imageUrl ? (
                 <img
-                    src={imageUrl}
+                    src={decodeURIComponent(imageUrl)}
                     alt="Custom cake reference"
                     style={{
                         maxWidth: "100%",
