@@ -193,10 +193,15 @@ export default function GalleryPage() {
         if (userInterrupted.current) return
 
         // UPDATED MATH: visible speed on mobile
-        const speed = isMobile ? AUTO_SCROLL_SPEED * 0.8 : AUTO_SCROLL_SPEED
+        const speed = isMobile
+          ? AUTO_SCROLL_SPEED * 0.35   // 👈 phone = much slower
+          : AUTO_SCROLL_SPEED
+
+        const divisor = 1200          // 👈 same for all devices
+
         progress += speed
 
-        const divisor = isMobile ? 500 : 1000
+
         const t = Math.min(progress / divisor, 1)
 
 
