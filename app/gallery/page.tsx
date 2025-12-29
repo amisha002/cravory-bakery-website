@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic"
 const FORCE_AUTO_SCROLL = process.env.NODE_ENV === "development"
 
 const AUTO_SCROLL_DELAY = 2400        // pause before start (premium)
-const AUTO_SCROLL_SPEED = 0.6         // constant luxury speed
+const AUTO_SCROLL_SPEED = 0.4         // constant luxury speed
 const AUTO_SCROLL_STOP_AT = 1.0      // stop at 70%
 const AUTO_SCROLL_COOLDOWN_HOURS = 6  // prod only
 
@@ -410,11 +410,33 @@ ${DOMAIN}/gallery/${image.id}
                 <X />
               </Button>
 
-              <div className="bg-background rounded-xl overflow-hidden">
+              <div className="relative bg-background rounded-xl overflow-hidden">
                 <img
                   src={selectedImage.image_url}
                   className="w-full max-h-[80vh] object-contain"
                 />
+
+                {/* ❤️ MODAL LIKE */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const key = `${selectedImage.image_url}-${selectedImage.created_at}`
+                    toggleLike(key)
+                  }}
+                  className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-white/90 p-2.5 shadow transition"
+                >
+                  <Heart
+                    className={`h-6 w-6 ${likes[`${selectedImage.image_url}-${selectedImage.created_at}`]
+                      ? "fill-rose-600 text-rose-600"
+                      : "text-gray-600"
+                      }`}
+                  />
+                  {likes[`${selectedImage.image_url}-${selectedImage.created_at}`] && (
+                    <span className="text-sm text-gray-600 font-medium leading-none">
+                      1
+                    </span>
+                  )}
+                </button>
                 <div className="p-6 border-t space-y-4">
                   {selectedImage.caption && (
                     <p className="text-lg font-medium">
