@@ -191,9 +191,9 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set())
   const [cupcakeState, setCupcakeState] = useState<Record<string, { mode: "piece" | "box" | null; boxSize: 4 | 8 | 12 | null }>>({})
 
-const [chocolateState, setChocolateState] = useState<Record<string, { mode: "piece" | "box" | null; boxSize: 6 | 9 | 12 | null }>>({})
+  const [chocolateState, setChocolateState] = useState<Record<string, { mode: "piece" | "box" | null; boxSize: 6 | 9 | 12 | null }>>({})
 
-const [liquorChocolateState, setLiquorChocolateState] = useState<Record<string, { mode: "piece" | "box" | null; boxSize: 6 | 9 | 12 | null }>>({})
+  const [liquorChocolateState, setLiquorChocolateState] = useState<Record<string, { mode: "piece" | "box" | null; boxSize: 6 | 9 | 12 | null }>>({})
 
   // Safe fallbacks for nested `data` shape to avoid runtime/TS errors
   const safeCakes = {
@@ -221,29 +221,29 @@ const [liquorChocolateState, setLiquorChocolateState] = useState<Record<string, 
   }
   // normalize chocolate-like sources (flavours | varieties | items)
   const normalizeChocolateItems = (source: any) => {
-  if (!source) return []
+    if (!source) return []
 
-  if (Array.isArray(source.flavours) && source.flavours.length > 0) {
-    return source.flavours
+    if (Array.isArray(source.flavours) && source.flavours.length > 0) {
+      return source.flavours
+    }
+
+    if (Array.isArray(source.varieties) && source.varieties.length > 0) {
+      return source.varieties
+    }
+
+    if (Array.isArray(source.items) && source.items.length > 0) {
+      return source.items
+    }
+
+    return []
   }
 
-  if (Array.isArray(source.varieties) && source.varieties.length > 0) {
-    return source.varieties
-  }
-
-  if (Array.isArray(source.items) && source.items.length > 0) {
-    return source.items
-  }
-
-  return []
-}
-
-// 🪄 TEMP MAGIC DATA (remove after DB fix)
-const fallbackLiquorItems = [
-  { name: "Dark Rum", price: 80 },
-  { name: "Vodka Almond", price: 90 },
-  { name: "Whiskey Truffle", price: 95 },
-]
+  // 🪄 TEMP MAGIC DATA (remove after DB fix)
+  const fallbackLiquorItems = [
+    { name: "Dark Rum", price: 80 },
+    { name: "Vodka Almond", price: 90 },
+    { name: "Whiskey Truffle", price: 95 },
+  ]
 
   const safeChocolates = {
     title: data?.chocolates?.title ?? "Chocolates",
@@ -251,12 +251,12 @@ const fallbackLiquorItems = [
   }
 
   const safeLiquor = {
-  title: data?.liquorChocolates?.title ?? "Liquor Chocolates",
-  flavours:
-    normalizeChocolateItems(data?.liquorChocolates).length > 0
-      ? normalizeChocolateItems(data?.liquorChocolates)
-      : fallbackLiquorItems,
-}
+    title: data?.liquorChocolates?.title ?? "Liquor Chocolates",
+    flavours:
+      normalizeChocolateItems(data?.liquorChocolates).length > 0
+        ? normalizeChocolateItems(data?.liquorChocolates)
+        : fallbackLiquorItems,
+  }
 
 
   const safeCakesicles = {
@@ -337,28 +337,28 @@ const fallbackLiquorItems = [
   const ChocolateCard = ({ item, categoryType, uniquePrefix }: { item: any; categoryType: "chocolates" | "liquorChocolates"; uniquePrefix: string }) => {
     const itemKey = `${uniquePrefix}-${item.name}`
     const isLiquor = categoryType === "liquorChocolates"
-const stateMap = isLiquor ? liquorChocolateState : chocolateState
-const setStateMap = isLiquor ? setLiquorChocolateState : setChocolateState
+    const stateMap = isLiquor ? liquorChocolateState : chocolateState
+    const setStateMap = isLiquor ? setLiquorChocolateState : setChocolateState
 
-const state = stateMap[itemKey] || { mode: null, boxSize: null }
+    const state = stateMap[itemKey] || { mode: null, boxSize: null }
 
-    
+
     const handleModeSelect = (mode: "piece" | "box") => {
-  setStateMap(prev => ({
-    ...prev,
-    [itemKey]: { mode, boxSize: null }
-  }))
-}
+      setStateMap(prev => ({
+        ...prev,
+        [itemKey]: { mode, boxSize: null }
+      }))
+    }
 
 
     const handleBoxSizeSelect = (size: 6 | 9 | 12) => {
-  setStateMap(prev => ({
-    ...prev,
-    [itemKey]: { mode: "box", boxSize: size }
-  }))
-}
+      setStateMap(prev => ({
+        ...prev,
+        [itemKey]: { mode: "box", boxSize: size }
+      }))
+    }
 
-    
+
 
     const calculateBoxPrice = (boxSize: 6 | 9 | 12) => {
       const basePrice = item.price * boxSize
@@ -423,14 +423,14 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
     return (
       <Card>
         <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-        <CategoryIcon
-  category={categoryType === "liquorChocolates" ? "liquor" : "chocolate"}
-  flavor={item.name}
-/>
+          <CategoryIcon
+            category={categoryType === "liquorChocolates" ? "liquor" : "chocolate"}
+            flavor={item.name}
+          />
 
           <p className="font-semibold">{item.name}</p>
           <p className="text-sm text-muted-foreground">₹{item.price} per piece</p>
-          
+
           {!state.mode ? (
             <div className="flex gap-2 w-full mt-2">
               <Button
@@ -525,7 +525,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
   const CupcakeCard = ({ item, subcategory, uniquePrefix }: { item: any; subcategory: string; uniquePrefix: string }) => {
     const itemKey = `${uniquePrefix}-${item.name}`
     const state = cupcakeState[itemKey] || { mode: null, boxSize: null }
-    
+
     const handleModeSelect = (mode: "piece" | "box") => {
       setCupcakeState(prev => ({
         ...prev,
@@ -606,7 +606,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
           <CategoryIcon category="cupcake" flavor={item.name} />
           <p className="font-semibold">{item.name}</p>
           <p className="text-sm text-muted-foreground">₹{item.price} per piece</p>
-          
+
           {!state.mode ? (
             <div className="flex gap-2 w-full mt-2">
               <Button
@@ -704,6 +704,22 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
       <section id="cakes">
         <h2 className="text-3xl font-bold mb-2 text-center">{safeCakes.title}</h2>
         <p className="text-center text-muted-foreground mb-8">{safeCakes.subtitle}</p>
+
+        {/* 🚚 DELIVERY INFO BLOCK */}
+        <div className="max-w-2xl mx-auto mb-10 p-4 rounded-xl bg-secondary/20 border border-secondary text-center space-y-2">
+          <h3 className="font-semibold text-secondary-foreground">Delivery Information</h3>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              📍 <span>Within Rishra & nearby areas</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              💰 <span>Free / Minimal delivery charges</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              ⏰ <span>Same-day & Next-day available</span>
+            </span>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortArrayByPrice(safeCakes.items).map((item: any, index: number) => (
             <Card key={`${item.name}-${index}`} className="hover:shadow-lg transition-shadow">
@@ -886,7 +902,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <CategoryIcon category="jar" flavor={item.name} />
                 <p className="font-semibold">{item.name}</p>
-<p className="text-sm text-muted-foreground">₹{item.price}</p>
+                <p className="text-sm text-muted-foreground">₹{item.price}</p>
 
                 <AddButton
                   uniqueKey={`jar-${item.name}`}
@@ -948,13 +964,13 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
         {safeChocolates.flavours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {sortArrayByPrice(safeChocolates.flavours).map((flavour: any, index: number) => (
-  <ChocolateCard
-    key={`${flavour.name}-${index}`}
-    item={flavour}
-    categoryType="chocolates"
-    uniquePrefix="choc"
-  />
-))}
+              <ChocolateCard
+                key={`${flavour.name}-${index}`}
+                item={flavour}
+                categoryType="chocolates"
+                uniquePrefix="choc"
+              />
+            ))}
 
           </div>
         ) : (
@@ -981,13 +997,13 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
         {safeLiquor.flavours && safeLiquor.flavours.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {sortArrayByPrice(safeLiquor.flavours).map((flavour: any, index: number) => (
-  <ChocolateCard
-    key={`${flavour.name}-${index}`}
-    item={flavour}
-    categoryType="liquorChocolates"
-    uniquePrefix="liq"
-  />
-))}
+              <ChocolateCard
+                key={`${flavour.name}-${index}`}
+                item={flavour}
+                categoryType="liquorChocolates"
+                uniquePrefix="liq"
+              />
+            ))}
 
           </div>
         ) : (
@@ -1022,7 +1038,7 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             {safeCakesicles.items && safeCakesicles.items.length > 0 ? (
               <div className="space-y-3">
                 {sortArrayByPrice(safeCakesicles.items).map((item: any, index: number) => (
-                <div key={`${item.name}-${index}`} className="flex justify-between items-center">
+                  <div key={`${item.name}-${index}`} className="flex justify-between items-center">
                     <div>
                       <span className="font-semibold">{item.name}</span>
                       {item.price_label && <span className="text-sm text-muted-foreground ml-2">({item.price_label})</span>}
@@ -1053,8 +1069,8 @@ const state = stateMap[itemKey] || { mode: null, boxSize: null }
             ) : (
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground font-medium">
-  {safeCakesicles.offer || "2 for ₹99"}
-</span>
+                  {safeCakesicles.offer || "2 for ₹99"}
+                </span>
                 <AddButton
                   uniqueKey="cakesicles"
                   onClick={() =>

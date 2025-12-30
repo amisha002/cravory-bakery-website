@@ -48,7 +48,13 @@ export function Hero() {
               />
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold text-balance mb-6 text-foreground">CRAVORY</h1>
+            <h1 className="text-5xl md:text-7xl font-bold text-balance mb-4 text-foreground">CRAVORY</h1>
+
+            {/* 🆕 TRUST LINE */}
+            <p className="text-sm md:text-base font-medium text-primary/90 mb-6 tracking-wide">
+              100% Eggless • Freshly Made • Local Delivery in Rishra
+            </p>
+
             <p className="text-2xl md:text-3xl text-primary font-display font-medium mb-4">crafting sweet cravings</p>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
               Indulge in our handcrafted collection of premium eggless desserts. From custom cakes to artisan
@@ -57,19 +63,19 @@ export function Hero() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center opacity-0 animate-fade-in delay-300">
-            <Link href="https://wa.me/918420174756" target="_blank">
-              <Button size="lg" className="rounded-full gap-2 hover:scale-105 transition-transform">
-                <MessageCircle className="h-5 w-5" />
-                Order on WhatsApp
+            <Link href="/menu">
+              <Button size="lg" className="rounded-full px-8 text-base font-semibold hover:scale-105 transition-transform">
+                Browse Menu
               </Button>
             </Link>
-            <Link href="/menu">
+            <Link href="https://wa.me/918420174756" target="_blank">
               <Button
                 size="lg"
                 variant="outline"
-                className="rounded-full bg-transparent hover:scale-105 transition-transform"
+                className="rounded-full gap-2 hover:scale-105 transition-transform"
               >
-                View Menu
+                <MessageCircle className="h-5 w-5" />
+                Order on Whatsapp
               </Button>
             </Link>
           </div>

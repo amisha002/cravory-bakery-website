@@ -21,9 +21,9 @@ const fredoka = Sans({
 })
 
 export const metadata: Metadata = {
-  title: "CRAVORY - Eggless Desserts Made with Love",
+  title: "Eggless Cakes in Rishra | CRAVORY",
   description:
-    "Premium eggless cakes, cupcakes, chocolates, and desserts. Fresh, customizable, and made with love.",
+    "Order premium eggless cakes in Rishra. Freshly baked, home-made cakes for birthdays, anniversaries & special occasions.",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",

@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/navbar"
 import { Hero } from "@/components/hero"
+import { OccasionBar } from "@/components/occasion-bar"
 import { CategoryHighlights } from "@/components/category-highlights"
 import { WhyCravory } from "@/components/why-cravory"
 import { CtaSection } from "@/components/cta-section"
@@ -10,6 +11,7 @@ export default function HomePage() {
     <div className="min-h-screen">
       <Navbar />
       <Hero />
+      <OccasionBar />
       <CategoryHighlights />
       <WhyCravory />
       <CtaSection />

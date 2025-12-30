@@ -268,6 +268,62 @@ export default function AdminGalleryUploadPage() {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* UPLOAD FORM */}
+        <form
+          onSubmit={handleUpload}
+          className="mb-8 p-6 border border-border/60 rounded-lg bg-white space-y-4 shadow-sm"
+
+        >
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" />
+            Upload New Gallery Image
+          </h2>
+
+          {/* FILE INPUT */}
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            required
+          />
+
+          {/* PREVIEW */}
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="h-40 w-40 object-cover rounded"
+            />
+          )}
+
+          {/* CATEGORY */}
+          <Select value={formCategory} onValueChange={setFormCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Birthday Cakes">Birthday Cakes</SelectItem>
+              <SelectItem value="Anniversary Cakes">Anniversary Cakes</SelectItem>
+              <SelectItem value="Custom Cakes">Custom Cakes</SelectItem>
+              <SelectItem value="Cupcakes">Cupcakes</SelectItem>
+              <SelectItem value="Chocolates">Chocolates</SelectItem>
+              <SelectItem value="Sweet Cravings">Sweet Cravings</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* CAPTION */}
+          <Textarea
+            placeholder="Optional caption (max 60 characters)"
+            value={formCaption}
+            onChange={(e) => setFormCaption(e.target.value.slice(0, 60))}
+          />
+
+          {/* SUBMIT */}
+          <Button type="submit" disabled={uploading}>
+            {uploading ? "Uploading..." : "Upload Image"}
+          </Button>
+        </form>
+
         {/* HEADER */}
         <div className="flex justify-between mb-6">
           <Link href="/admin-menu">

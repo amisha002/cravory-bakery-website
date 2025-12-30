@@ -96,7 +96,7 @@ export default function MenuPage() {
         flavours: [],
       },
       liquorChocolates: {
-        title: "Liquor Chocolates (Vodka-infused)",
+        title: "Liquor Chocolates (Eggless)",
         boxes: [],
         flavours: [],
       },
@@ -347,7 +347,7 @@ export default function MenuPage() {
       flavours: [],
     },
     liquorChocolates: {
-      title: "Liquor Chocolates (Vodka-infused)",
+      title: "Liquor Chocolates (Eggless) ",
       boxes: [],
       flavours: [],
     },
@@ -482,7 +482,7 @@ export default function MenuPage() {
 
             {/* Mobile: category selector */}
             <div className="sm:hidden">
-              <Select value={activeCategory ?? ""} onValueChange={(v) => scrollToCategory(v || "cakes") }>
+              <Select value={activeCategory ?? ""} onValueChange={(v) => scrollToCategory(v || "cakes")}>
                 <SelectTrigger className="w-40 h-8 text-sm">
                   <SelectValue placeholder="Categories" />
                 </SelectTrigger>

@@ -424,6 +424,16 @@ Please let me know the price & availability.
                         />
                       </div>
 
+                      {/* 🚚 DELIVERY INFO (Custom Order) */}
+                      <div className="pt-2 pb-4 text-center space-y-1">
+                        <p className="text-sm font-medium text-foreground flex justify-center items-center gap-1.5">
+                          📍 Delivery available in Rishra & nearby
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Delivery charges applicable based on distance
+                        </p>
+                      </div>
+
                       <Button
                         type="submit"
                         size="lg"

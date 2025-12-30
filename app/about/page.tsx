@@ -137,7 +137,19 @@ export default function AboutPage() {
         </div>
       </div>
 
+      <div className="mt-16 text-center animate-fade-in-up">
+        <a
+          href="https://share.google/9UyFqjGvLejugYstp"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors hover:scale-105"
+        >
+          <span>📍 Rishra, West Bengal</span>
+        </a>
+        <p className="text-sm text-muted-foreground mt-1">Home Baker • Local Delivery</p>
+      </div>
+
       <Footer />
-    </div>
+    </div >
   )
 }

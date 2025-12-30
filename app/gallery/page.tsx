@@ -23,6 +23,8 @@ const AUTO_SCROLL_COOLDOWN_HOURS = 6  // prod only
 
 
 
+import { useSearchParams } from "next/navigation"
+
 /* ================= TYPES ================= */
 
 interface GalleryImage {
@@ -35,14 +37,22 @@ interface GalleryImage {
 
 /* ================= PAGE ================= */
 
-/* ================= PAGE ================= */
-
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null)
+
+  const searchParams = useSearchParams()
+
+  /* ================= HANDLE URL QUERY PARAM ================= */
+  useEffect(() => {
+    const categoryParam = searchParams.get("category")
+    if (categoryParam) {
+      setSelectedCategory(categoryParam)
+    }
+  }, [searchParams])
 
   // NEW STATE STRUCTURE
   const [likedByUser, setLikedByUser] = useState<Record<string, boolean>>({})

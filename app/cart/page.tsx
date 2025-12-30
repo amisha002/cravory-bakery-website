@@ -166,6 +166,13 @@ export default function CartPage() {
 
           <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary animate-scale-in hover:shadow-2xl transition-shadow">
             <CardContent className="p-6">
+
+              {/* 🚚 DELIVERY INFO (Cart Context) */}
+              <div className="mb-6 pb-6 border-b border-primary/20 text-center space-y-1">
+                <p className="text-sm font-medium text-foreground">📍 Local delivery available in Rishra</p>
+                <p className="text-xs text-muted-foreground">Same-day / Next-day available • Charges vary by distance</p>
+              </div>
+
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xl font-semibold">Total:</span>
                 <span className="text-3xl font-bold text-primary">₹{totalPrice}</span>
