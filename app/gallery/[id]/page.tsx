@@ -1,4 +1,3 @@
-
 import { supabaseServer } from "@/lib/supabase-server"
 import type { Metadata, ResolvingMetadata } from "next"
 import { Navbar } from "@/components/navbar"
@@ -7,23 +6,21 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
-// Force dynamic rendering since we depend on params
 export const dynamic = "force-dynamic"
 
 interface Props {
-    params: Promise<{ id: string }>
+    params: { id: string }
 }
 
-// 1. GENERATE METADATA FOR WHATSAPP PREVIEWS
+/* ================= METADATA ================= */
+
 export async function generateMetadata(
-    props: Props,
+    { params }: Props,
     parent: ResolvingMetadata
 ): Promise<Metadata> {
-    const params = await props.params
-    const id = params.id
+    const { id } = params
     const DOMAIN = "https://cravory-bakery.vercel.app"
 
-    // Fetch image data
     const { data: image } = await supabaseServer
         .from("gallery_images")
         .select("*")
@@ -35,7 +32,7 @@ export async function generateMetadata(
             title: "Cravory Cake Gallery",
             description: "Check out our delicious cakes!",
             openGraph: {
-                images: ["/og-default.jpg"], // fallback if you have one
+                images: ["/og-default.jpg"],
             },
         }
     }
@@ -47,34 +44,27 @@ export async function generateMetadata(
 
     return {
         metadataBase: new URL(DOMAIN),
-        title: title,
-        description: description,
+        title,
+        description,
         openGraph: {
-            title: title,
-            description: description,
+            title,
+            description,
             url: pageUrl,
-            images: [
-                {
-                    url: imageUrl,
-                    width: 800,
-                    height: 600,
-                    alt: title,
-                },
-            ],
+            images: [{ url: imageUrl, width: 800, height: 600, alt: title }],
             siteName: "Cravory Bakery",
         },
         twitter: {
             card: "summary_large_image",
-            title: title,
-            description: description,
+            title,
+            description,
             images: [imageUrl],
         },
     }
 }
 
-// 2. PAGE COMPONENT
-export default async function GalleryDetailPage(props: Props) {
-    const params = await props.params
+/* ================= PAGE ================= */
+
+export default async function GalleryDetailPage({ params }: Props) {
     const { id } = params
 
     const { data: image, error } = await supabaseServer
@@ -106,8 +96,6 @@ export default async function GalleryDetailPage(props: Props) {
 
             <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
                 <div className="max-w-4xl mx-auto">
-
-                    {/* BACK BUTTON */}
                     <Link href="/gallery" className="inline-block mb-6">
                         <Button variant="ghost" className="pl-0 hover:pl-2 transition-all">
                             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -116,7 +104,6 @@ export default async function GalleryDetailPage(props: Props) {
                     </Link>
 
                     <div className="bg-card rounded-xl overflow-hidden shadow-lg border">
-                        {/* IMAGE */}
                         <div className="relative aspect-video w-full bg-muted/20">
                             <img
                                 src={image.image_url}
@@ -125,7 +112,6 @@ export default async function GalleryDetailPage(props: Props) {
                             />
                         </div>
 
-                        {/* DETAILS */}
                         <div className="p-6 md:p-8 space-y-6">
                             <div>
                                 <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3">
@@ -136,16 +122,20 @@ export default async function GalleryDetailPage(props: Props) {
                                 </h1>
                             </div>
 
-                            {/* WHATSAPP CTA for consistency if they land here */}
                             <a
                                 href={`https://wa.me/918420174756?text=${encodeURIComponent(
-                                    `Hi CRAVORY 👋\nI’d like to order this cake 🍰\n\nCategory: ${image.category
-                                    }\nDescription: ${image.caption || "—"
-                                    }\n\nView cake:\nhttps://cravory-bakery.vercel.app/gallery/${id}`
+                                    `Hi CRAVORY 👋
+I’d like to order this cake 🍰
+
+Category: ${image.category}
+Description: ${image.caption || "—"}
+
+View cake:
+https://cravory-bakery.vercel.app/gallery/${id}`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full md:w-auto"
+                                className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full md:w-auto"
                             >
                                 Order this on WhatsApp
                             </a>
