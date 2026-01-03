@@ -1,30 +1,28 @@
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+
 import { unstable_noStore as noStore } from "next/cache"
 import { supabaseServer } from "@/lib/supabase-server"
-import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-
-export const dynamic = "force-dynamic"
+import type { Metadata } from "next"
 
 interface Props {
     params: { id: string }
 }
 
-/* ================= METADATA ================= */
+/* ========= METADATA ========= */
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     noStore()
 
-    const { id } = params
-    const DOMAIN = "https://cravory-bakery.vercel.app"
-
     const { data: image } = await supabaseServer
         .from("gallery_images")
         .select("image_url, caption, category")
-        .eq("id", id)
+        .eq("id", params.id)
         .maybeSingle()
 
     if (!image) {
@@ -35,39 +33,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     return {
-        metadataBase: new URL(DOMAIN),
         title: image.caption ?? "CRAVORY Cake",
         description: image.category ?? "Eggless cake by Cravory",
         openGraph: {
-            title: image.caption ?? "CRAVORY Cake",
-            description: image.category ?? "Eggless cake by Cravory",
-            url: `${DOMAIN}/gallery/${id}`,
             images: [{ url: image.image_url }],
-            siteName: "Cravory Bakery",
         },
         twitter: {
             card: "summary_large_image",
-            title: image.caption ?? "CRAVORY Cake",
-            description: image.category ?? "Eggless cake by Cravory",
             images: [image.image_url],
         },
     }
 }
 
-/* ================= PAGE ================= */
+/* ========= PAGE ========= */
 
 export default async function GalleryDetailPage({ params }: Props) {
     noStore()
 
-    const { id } = params
-
-    const { data: image } = await supabaseServer
+    const { data: image, error } = await supabaseServer
         .from("gallery_images")
         .select("*")
-        .eq("id", id)
+        .eq("id", params.id)
         .maybeSingle()
 
-    if (!image) {
+    if (error || !image) {
+        console.error("Image fetch failed:", error)
         return (
             <div className="min-h-screen flex flex-col">
                 <Navbar />
@@ -93,7 +83,7 @@ export default async function GalleryDetailPage({ params }: Props) {
 
                 <img
                     src={image.image_url}
-                    alt={image.caption || "Cake"}
+                    alt={image.caption}
                     className="w-full rounded-xl mb-6"
                 />
 
@@ -109,7 +99,7 @@ Category: ${image.category}
 Description: ${image.caption}
 
 View cake:
-https://cravory-bakery.vercel.app/gallery/${id}`
+https://cravory-bakery.vercel.app/gallery/${params.id}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -117,7 +107,6 @@ https://cravory-bakery.vercel.app/gallery/${id}`
                 >
                     Order this on WhatsApp
                 </a>
-
             </main>
 
             <Footer />
