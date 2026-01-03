@@ -1,45 +1,44 @@
-import { unstable_noStore as noStore } from "next/cache"
-import { supabaseServer } from "@/lib/supabase-server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
-export const dynamic = "force-dynamic"
+export default function GalleryDetailPage() {
+    const { id } = useParams()
+    const [image, setImage] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
 
-interface Props {
-    params: { id: string }
-}
+    useEffect(() => {
+        const fetchImage = async () => {
+            const { data } = await supabase
+                .from("gallery_images")
+                .select("*")
+                .eq("id", id)
+                .single()
 
-export default async function GalleryDetailPage({ params }: Props) {
-    noStore()
+            setImage(data)
+            setLoading(false)
+        }
 
-    const { data: image, error } = await supabaseServer
-        .from("gallery_images")
-        .select("*")
-        .eq("id", params.id)
-        .single()
+        fetchImage()
+    }, [id])
 
-    if (error || !image) {
-        return (
-            <>
-                <Navbar />
-                <div className="py-20 text-center text-lg">Image not found</div>
-                <Footer />
-            </>
-        )
+    if (loading) {
+        return <div className="py-20 text-center">Loading…</div>
+    }
+
+    if (!image) {
+        return <div className="py-20 text-center">Image not found</div>
     }
 
     return (
-        <>
+        <div className="min-h-screen flex flex-col">
             <Navbar />
 
-            <main className="max-w-4xl mx-auto px-4 py-10">
-                <Link href="/gallery" className="inline-flex items-center mb-6">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Gallery
-                </Link>
-
+            <main className="flex-1 max-w-4xl mx-auto px-4 py-10">
                 <img
                     src={image.image_url}
                     alt={image.caption}
@@ -58,17 +57,16 @@ Category: ${image.category}
 Description: ${image.caption}
 
 View cake:
-https://cravory-bakery.vercel.app/gallery/${params.id}`
+https://cravory-bakery.vercel.app/gallery/${image.id}`
                     )}`}
                     target="_blank"
-                    rel="noopener noreferrer"
                     className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-11 px-8"
                 >
-                    Order this on WhatsApp
+                    Order on WhatsApp
                 </a>
             </main>
 
             <Footer />
-        </>
+        </div>
     )
 }
