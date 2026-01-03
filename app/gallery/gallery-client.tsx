@@ -314,8 +314,7 @@ Category: ${image.category || "Cake"}
 Description: ${image.caption || "—"}
 
 View cake:
-${DOMAIN}/cake?image=${encodeURIComponent(image.image_url)}&caption=${encodeURIComponent(image.caption || "CRAVORY Cake")}
-
+${DOMAIN}/gallery/${image.id}
 `.trim()
 
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
