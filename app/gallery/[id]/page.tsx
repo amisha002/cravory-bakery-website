@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         .from("gallery_images")
         .select("image_url, caption, category")
         .eq("id", id)
-        .maybeSingle()   // ✅ FIXED
+        .maybeSingle()
 
     if (!image) {
         return {
@@ -34,24 +34,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         }
     }
 
-    const title = image.caption || "CRAVORY Cake"
-    const description = image.category || "Eggless cake by Cravory"
-
     return {
         metadataBase: new URL(DOMAIN),
-        title,
-        description,
+        title: image.caption ?? "CRAVORY Cake",
+        description: image.category ?? "Eggless cake by Cravory",
         openGraph: {
-            title,
-            description,
+            title: image.caption ?? "CRAVORY Cake",
+            description: image.category ?? "Eggless cake by Cravory",
             url: `${DOMAIN}/gallery/${id}`,
             images: [{ url: image.image_url }],
             siteName: "Cravory Bakery",
         },
         twitter: {
             card: "summary_large_image",
-            title,
-            description,
+            title: image.caption ?? "CRAVORY Cake",
+            description: image.category ?? "Eggless cake by Cravory",
             images: [image.image_url],
         },
     }
@@ -68,7 +65,7 @@ export default async function GalleryDetailPage({ params }: Props) {
         .from("gallery_images")
         .select("*")
         .eq("id", id)
-        .maybeSingle()   // ✅ FIXED
+        .maybeSingle()
 
     if (!image) {
         return (
@@ -100,13 +97,8 @@ export default async function GalleryDetailPage({ params }: Props) {
                     className="w-full rounded-xl mb-6"
                 />
 
-                <h1 className="text-2xl font-bold mb-2">
-                    {image.caption}
-                </h1>
-
-                <p className="text-muted-foreground mb-6">
-                    {image.category}
-                </p>
+                <h1 className="text-2xl font-bold mb-2">{image.caption}</h1>
+                <p className="text-muted-foreground mb-6">{image.category}</p>
 
                 <a
                     href={`https://wa.me/918420174756?text=${encodeURIComponent(
@@ -125,6 +117,7 @@ https://cravory-bakery.vercel.app/gallery/${id}`
                 >
                     Order this on WhatsApp
                 </a>
+
             </main>
 
             <Footer />
