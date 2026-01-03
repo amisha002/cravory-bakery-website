@@ -1,51 +1,15 @@
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
 import { unstable_noStore as noStore } from "next/cache"
 import { supabaseServer } from "@/lib/supabase-server"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import type { Metadata } from "next"
+
+export const dynamic = "force-dynamic"
 
 interface Props {
     params: { id: string }
 }
-
-/* ========= METADATA ========= */
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    noStore()
-
-    const { data: image } = await supabaseServer
-        .from("gallery_images")
-        .select("image_url, caption, category")
-        .eq("id", params.id)
-        .maybeSingle()
-
-    if (!image) {
-        return {
-            title: "Cravory Cake Gallery",
-            description: "Eggless cakes by Cravory",
-        }
-    }
-
-    return {
-        title: image.caption ?? "CRAVORY Cake",
-        description: image.category ?? "Eggless cake by Cravory",
-        openGraph: {
-            images: [{ url: image.image_url }],
-        },
-        twitter: {
-            card: "summary_large_image",
-            images: [image.image_url],
-        },
-    }
-}
-
-/* ========= PAGE ========= */
 
 export default async function GalleryDetailPage({ params }: Props) {
     noStore()
@@ -54,31 +18,26 @@ export default async function GalleryDetailPage({ params }: Props) {
         .from("gallery_images")
         .select("*")
         .eq("id", params.id)
-        .maybeSingle()
+        .single()
 
     if (error || !image) {
-        console.error("Image fetch failed:", error)
         return (
-            <div className="min-h-screen flex flex-col">
+            <>
                 <Navbar />
-                <div className="flex-1 flex items-center justify-center">
-                    <p className="text-lg font-medium">Image not found</p>
-                </div>
+                <div className="py-20 text-center text-lg">Image not found</div>
                 <Footer />
-            </div>
+            </>
         )
     }
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <>
             <Navbar />
 
-            <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-                <Link href="/gallery">
-                    <Button variant="ghost" className="mb-6">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Gallery
-                    </Button>
+            <main className="max-w-4xl mx-auto px-4 py-10">
+                <Link href="/gallery" className="inline-flex items-center mb-6">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Gallery
                 </Link>
 
                 <img
@@ -110,6 +69,6 @@ https://cravory-bakery.vercel.app/gallery/${params.id}`
             </main>
 
             <Footer />
-        </div>
+        </>
     )
 }
