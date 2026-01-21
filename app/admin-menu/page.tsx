@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, Edit2, Package, Image as ImageIcon } from "lucide-react"
+import { Trash2, Edit2, Package, Image as ImageIcon, Plus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/lib/auth"
@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic"
 interface MenuItem {
   id: string
   category: string
+  category_id?: string
   subcategory: string | null
   item_name: string
   price_label: string
@@ -25,7 +26,14 @@ interface MenuItem {
   created_at: string
 }
 
-const CATEGORIES = [
+interface Category {
+  id: string
+  name: string
+  slug: string
+}
+
+// Fallback categories used only if DB fetch fails
+const DEFAULT_CATEGORIES = [
   "Cakes",
   "Cupcakes",
   "Jar Cakes",
@@ -64,8 +72,10 @@ export default function AdminMenuPage() {
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
   const [formData, setFormData] = useState({
     category: "",
+    category_id: "",
     subcategory: "",
     item_name: "",
     price_label: "",
@@ -82,8 +92,23 @@ export default function AdminMenuPage() {
   useEffect(() => {
     if (user) {
       fetchMenuItems()
+      fetchCategories()
     }
   }, [user])
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("menu_categories")
+        .select("*")
+        .order("order_index")
+
+      if (error) throw error
+      setCategories(data || [])
+    } catch (err) {
+      console.error("Error fetching categories:", err)
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
@@ -147,6 +172,7 @@ export default function AdminMenuPage() {
           .from("menu_items")
           .update({
             category: formData.category,
+            category_id: formData.category_id || null,
             subcategory: formData.category === "Cupcakes" ? formData.subcategory : null,
             item_name: formData.item_name,
             price_label: formData.price_label,
@@ -166,6 +192,7 @@ export default function AdminMenuPage() {
           .insert([
             {
               category: formData.category,
+              category_id: formData.category_id || null,
               subcategory: formData.category === "Cupcakes" ? formData.subcategory : null,
               item_name: formData.item_name,
               price_label: formData.price_label,
@@ -181,7 +208,7 @@ export default function AdminMenuPage() {
         })
       }
 
-      setFormData({ category: "", subcategory: "", item_name: "", price_label: "", price: "" })
+      setFormData({ category: "", category_id: "", subcategory: "", item_name: "", price_label: "", price: "" })
       setEditingId(null)
       await fetchMenuItems()
     } catch (err) {
@@ -200,6 +227,7 @@ export default function AdminMenuPage() {
   const handleEdit = (item: MenuItem) => {
     setFormData({
       category: item.category,
+      category_id: item.category_id || "",
       subcategory: item.subcategory || "",
       item_name: item.item_name,
       price_label: item.price_label,
@@ -215,7 +243,7 @@ export default function AdminMenuPage() {
   }
 
   const handleCancelEdit = () => {
-    setFormData({ category: "", subcategory: "", item_name: "", price_label: "", price: "" })
+    setFormData({ category: "", category_id: "", subcategory: "", item_name: "", price_label: "", price: "" })
     setEditingId(null)
   }
 
@@ -281,6 +309,12 @@ export default function AdminMenuPage() {
                 Menu
               </Button>
             </Link>
+            <Link href="/admin-menu-categories">
+              <Button variant="outline" className="gap-2 text-primary">
+                <Plus className="h-4 w-4" />
+                Categories
+              </Button>
+            </Link>
             <Link href="/admin-gallery-upload">
               <Button variant="outline" className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -298,7 +332,7 @@ export default function AdminMenuPage() {
             Logout
           </Button>
         </div>
-            <Card className="mb-8" id="admin-form">
+        <Card className="mb-8" id="admin-form">
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-4">
               {editingId ? "Edit Menu Item" : "Add New Menu Item"}
@@ -309,13 +343,21 @@ export default function AdminMenuPage() {
                   <Label htmlFor="category">Category *</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value, subcategory: "" })}
+                    onValueChange={(value) => {
+                      const selectedCat = categories.find(c => c.name === value);
+                      setFormData({
+                        ...formData,
+                        category: value,
+                        category_id: selectedCat?.id || "",
+                        subcategory: ""
+                      });
+                    }}
                   >
                     <SelectTrigger id="category" className="w-full">
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
+                      {(categories.length > 0 ? categories.map(c => c.name) : DEFAULT_CATEGORIES).map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>
@@ -422,7 +464,7 @@ export default function AdminMenuPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Categories</SelectItem>
-                {CATEGORIES.map((cat) => (
+                {(categories.length > 0 ? categories.map(c => c.name) : DEFAULT_CATEGORIES).map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -443,51 +485,51 @@ export default function AdminMenuPage() {
               {menuItems
                 .filter((item) => filterCategory === "All" || item.category === filterCategory)
                 .map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-lg">{item.item_name}</span>
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                            {item.category}
-                          </span>
-                          {item.subcategory && (
+                  <Card key={item.id}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-lg">{item.item_name}</span>
                             <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                              {item.subcategory}
+                              {item.category}
                             </span>
-                          )}
+                            {item.subcategory && (
+                              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                {item.subcategory}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.price_label}: ₹{item.price}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.price_label}: ₹{item.price}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEdit(item)}
+                            disabled={deletingId === item.id || editingId === item.id}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deletingId === item.id || editingId === item.id}
+                          >
+                            {deletingId === item.id ? (
+                              <span className="text-xs">...</span>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEdit(item)}
-                          disabled={deletingId === item.id || editingId === item.id}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={deletingId === item.id || editingId === item.id}
-                        >
-                          {deletingId === item.id ? (
-                            <span className="text-xs">...</span>
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           )}
         </div>

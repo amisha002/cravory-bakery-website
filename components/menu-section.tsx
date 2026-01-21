@@ -89,7 +89,7 @@ const CategoryIcon = ({
   }
 
   // Cute jar icon - filled, rounded, SAME for all jar cakes
-  if (category === "jar") {
+  if (category === "jar" || category === "jar-cakes") {
     return (
       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -118,7 +118,7 @@ const CategoryIcon = ({
   }
 
   // Cute chocolate box icon - filled, rounded, SAME for regular chocolates
-  if (category === "chocolate") {
+  if (category === "chocolate" || category === "chocolates") {
     return (
       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -134,7 +134,7 @@ const CategoryIcon = ({
   }
 
   // Cute liquor chocolate box - same as chocolate with a subtle dot
-  if (category === "liquor") {
+  if (category === "liquor" || category === "liquor-chocolates") {
     return (
       <div
         className={`w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF94] to-[#B89A7D] flex items-center justify-center mb-2`}
@@ -153,7 +153,7 @@ const CategoryIcon = ({
   }
 
   // Cute cakesicle icon - rounded, on a stick
-  if (category === "cakesicle") {
+  if (category === "cakesicle" || category === "cakesicles") {
     return (
       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -168,7 +168,7 @@ const CategoryIcon = ({
   }
 
   // Cute popsicle icon - round cake pop style
-  if (category === "popsicle") {
+  if (category === "popsicle" || category === "popsicles") {
     return (
       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -182,7 +182,29 @@ const CategoryIcon = ({
     )
   }
 
-  return null
+  // Cute bento cake box icon
+  if (category === "bento" || category.includes("bento")) {
+    return (
+      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="7" width="14" height="12" rx="2" fill="#E7C4A8" stroke="#B89A7D" strokeWidth="1" />
+          <path d="M5 11h14" stroke="#B89A7D" strokeWidth="1" />
+          <path d="M9 7v4M15 7v4" stroke="#B89A7D" strokeWidth="1" />
+          <path d="M7 14c.5-.3 1.5-.5 2.5-.5s2 .2 2.5.5M13 14c.5-.3 1.5-.5 2.5-.5s2 .2 2.5.5" stroke="#D4AF94" strokeWidth="1" strokeLinecap="round" />
+        </svg>
+      </div>
+    )
+  }
+
+  // Generic fallback icon
+  return (
+    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center mb-2`}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" fill="#E7C4A8" stroke="#B89A7D" strokeWidth="1" />
+        <path d="M12 22V12M20 7l-8 5M4 7l8 5" stroke="#B89A7D" strokeWidth="1" />
+      </svg>
+    </div>
+  )
 }
 
 export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOrder?: string }) {
@@ -211,8 +233,8 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
   }
 
   const safeJarCakes = {
-    title: data?.jarCakes?.title ?? "",
-    items: data?.jarCakes?.items ?? [],
+    title: data?.["jar-cakes"]?.title ?? "",
+    items: data?.["jar-cakes"]?.items ?? [],
   }
 
   const safeCheesecake = {
@@ -251,10 +273,10 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
   }
 
   const safeLiquor = {
-    title: data?.liquorChocolates?.title ?? "Liquor Chocolates",
+    title: data?.["liquor-chocolates"]?.title ?? "Liquor Chocolates",
     flavours:
-      normalizeChocolateItems(data?.liquorChocolates).length > 0
-        ? normalizeChocolateItems(data?.liquorChocolates)
+      normalizeChocolateItems(data?.["liquor-chocolates"]).length > 0
+        ? normalizeChocolateItems(data?.["liquor-chocolates"])
         : fallbackLiquorItems,
   }
 
@@ -293,6 +315,13 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
 
   const getItemPrice = (item: any) => {
     if (!item) return Infinity
+
+    // New variants structure
+    if (Array.isArray(item.variants) && item.variants.length > 0) {
+      const prices = item.variants.map((v: any) => v.price).filter((p: any) => typeof p === "number" && p > 0)
+      return prices.length > 0 ? Math.min(...prices) : Infinity
+    }
+
     // common price fields
     if (typeof item.price === "number" && item.price > 0) return item.price
     // cakes have halfPound / onePound
@@ -314,23 +343,78 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
     return copy
   }
 
-  const AddButton = ({ uniqueKey, onClick, className = "", children }: any) => {
-    const isAdded = addedItems.has(uniqueKey)
-    return (
-      <Button
-        size="sm"
-        onClick={onClick}
-        className={`transition-all ${isAdded ? "bg-green-500 hover:bg-green-600" : ""} ${className}`}
-        disabled={isAdded}
-      >
-        {isAdded ? (
+  const AddButton = ({ uniqueKey, onClick, className = "", children }: any) => (
+    <Button
+      size="sm"
+      variant={addedItems.has(uniqueKey) ? "outline" : "default"}
+      className={`rounded-full h-8 px-4 transition-all duration-300 ${addedItems.has(uniqueKey) ? "bg-green-50 border-green-200 text-green-600 hover:bg-green-100" : ""
+        } ${className}`}
+      onClick={(e) => {
+        e.preventDefault()
+        onClick()
+      }}
+    >
+      {addedItems.has(uniqueKey) ? (
+        <>
+          <Check className="h-4 w-4 mr-1" /> Added
+        </>
+      ) : (
+        children || (
           <>
-            <Check className="h-4 w-4 mr-1" /> Added
+            <Plus className="h-4 w-4 mr-1" /> Add
           </>
-        ) : (
-          children || <Plus className="h-4 w-4" />
-        )}
-      </Button>
+        )
+      )}
+    </Button>
+  )
+
+  const GenericItemCard = ({ item, category, slug, index }: { item: any, category: string, slug: string, index: number }) => {
+    const uniqueKey = `${slug}-${index}`
+    return (
+      <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <CategoryIcon category={slug} flavor={item.name} />
+            <CardTitle className="font-semibold text-lg">{item.name}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(item.variants || []).map((variant: any, vIdx: number) => (
+            <div key={vIdx} className="flex justify-between items-center py-1 first:pt-0 last:pb-0">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {variant.label || "Standard"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground font-medium">₹{variant.price}</span>
+                <AddButton
+                  uniqueKey={`${uniqueKey}-${vIdx}`}
+                  onClick={() => handleAddToCart({
+                    name: `${item.name} (${variant.label || "Standard"})`,
+                    price: variant.price,
+                    category: category
+                  }, `${uniqueKey}-${vIdx}`)}
+                />
+              </div>
+            </div>
+          ))}
+          {/* If no variants but price exists (fallback) */}
+          {!item.variants && item.price && (
+            <div className="flex justify-between items-center">
+              <span className="text-xl font-bold text-primary">₹{item.price}</span>
+              <AddButton
+                uniqueKey={uniqueKey}
+                onClick={() => handleAddToCart({
+                  name: item.name,
+                  price: item.price,
+                  category: category
+                }, uniqueKey)}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     )
   }
 
@@ -722,125 +806,25 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortArrayByPrice(safeCakes.items).map((item: any, index: number) => (
-            <Card key={`${item.name}-${index}`} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <CategoryIcon category="cake" flavor={item.name} />
-                  <CardTitle className="font-semibold">{item.name}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Half Pound</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground font-medium">₹{item.halfPound}</span>
-                    <AddButton
-                      uniqueKey={`${item.name}-half`}
-                      onClick={() =>
-                        handleAddToCart(
-                          {
-                            ...item,
-                            name: `${item.name} Cake (Half Pound)`,
-                            price: item.halfPound,
-                            category: "Cakes",
-                          },
-                          `${item.name}-half`,
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">1 Pound</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground font-medium">₹{item.onePound}</span>
-                    <AddButton
-                      uniqueKey={`${item.name}-one`}
-                      onClick={() =>
-                        handleAddToCart(
-                          {
-                            ...item,
-                            name: `${item.name} Cake (1 Pound)`,
-                            price: item.onePound,
-                            category: "Cakes",
-                          },
-                          `${item.name}-one`,
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <GenericItemCard
+              key={`${item.name}-${index}`}
+              item={item}
+              category="Cakes"
+              slug="cake"
+              index={index}
+            />
           ))}
         </div>
 
         {safeCakes.special && (
-          <Card className="mt-8 bg-primary/5 border-primary">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <CategoryIcon category="cake" flavor={safeCakes.special.name || "Dry Fruit"} />
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="text-primary">⭐</span> Special Cake
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="font-semibold mb-4">{safeCakes.special.name}</p>
-              <div className="flex flex-col sm:flex-row gap-6">
-                {safeCakes.special.halfPound > 0 && (
-                  <div className="flex justify-between items-center flex-1">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Half Pound</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground font-medium">₹{safeCakes.special.halfPound}</span>
-                      <AddButton
-                        uniqueKey="special-half"
-                        onClick={() =>
-                          handleAddToCart(
-                            {
-                              name: `${safeCakes.special.name} (Half Pound)`,
-                              price: safeCakes.special.halfPound,
-                              category: "Cakes",
-                            },
-                            "special-half",
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-                {safeCakes.special.onePound > 0 && (
-                  <div className="flex justify-between items-center flex-1">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">1 Pound</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground font-medium">₹{safeCakes.special.onePound}</span>
-                      <AddButton
-                        uniqueKey="special-one"
-                        onClick={() =>
-                          handleAddToCart(
-                            {
-                              name: `${safeCakes.special.name} (1 Pound)`,
-                              price: safeCakes.special.onePound,
-                              category: "Cakes",
-                            },
-                            "special-one",
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mt-8">
+            <GenericItemCard
+              item={safeCakes.special}
+              category="Cakes"
+              slug="cake"
+              index={999}
+            />
+          </div>
         )}
       </section>
 
@@ -896,32 +880,15 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
       {/* Jar Cakes Section */}
       <section id="jar-cakes">
         <h2 className="text-3xl font-bold mb-8 text-center">{safeJarCakes.title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortArrayByPrice(safeJarCakes.items).map((item: any, index: number) => (
-            <Card key={`${item.name}-${index}`}>
-              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                <CategoryIcon category="jar" flavor={item.name} />
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-sm text-muted-foreground">₹{item.price}</p>
-
-                <AddButton
-                  uniqueKey={`jar-${item.name}`}
-                  onClick={() =>
-                    handleAddToCart(
-                      {
-                        ...item,
-                        name: `${item.name} Jar Cake`,
-                        category: "Jar Cakes",
-                      },
-                      `jar-${item.name}`,
-                    )
-                  }
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add
-                </AddButton>
-              </CardContent>
-            </Card>
+            <GenericItemCard
+              key={`${item.name}-${index}`}
+              item={item}
+              category="Jar Cakes"
+              slug="jar-cakes"
+              index={index}
+            />
           ))}
         </div>
       </section>
@@ -931,29 +898,13 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
         <h2 className="text-3xl font-bold mb-8 text-center">{safeCheesecake.title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
           {sortArrayByPrice(safeCheesecake.items).map((item: any, index: number) => (
-            <Card key={`${item.name}-${index}`} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                <CategoryIcon category="cheesecake" flavor={item.name} />
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-muted-foreground font-medium">₹{item.price}</p>
-                <AddButton
-                  uniqueKey={`cheese-${item.name}`}
-                  onClick={() =>
-                    handleAddToCart(
-                      {
-                        ...item,
-                        name: `${item.name} Cheesecake Slice`,
-                        category: "Cheesecake",
-                      },
-                      `cheese-${item.name}`,
-                    )
-                  }
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add
-                </AddButton>
-              </CardContent>
-            </Card>
+            <GenericItemCard
+              key={`${item.name}-${index}`}
+              item={item}
+              category="Cheesecake"
+              slug="cheesecake"
+              index={index}
+            />
           ))}
         </div>
       </section>
@@ -1024,122 +975,93 @@ export function MenuSection({ data, sortOrder = "default" }: { data: any; sortOr
         )}
       </section>
 
-      {/* Cakesicles & Popsicles Section */}
-      <section id="cakesicles-popsicles" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-primary/5 border-primary">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <CategoryIcon category="cakesicle" flavor="Cakesicle" />
-              <CardTitle className="text-2xl">{safeCakesicles.title}</CardTitle>
+      {/* Cakesicles Section */}
+      {safeCakesicles.items.length > 0 && (
+        <section id="cakesicles">
+          <h2 className="text-3xl font-bold mb-8 text-center">Cakesicles</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortArrayByPrice(safeCakesicles.items).map((item: any, index: number) => (
+              <GenericItemCard
+                key={`cakesicle-${index}`}
+                item={item}
+                category="Cakesicles"
+                slug="cakesicles"
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Popsicles Section */}
+      {safePopsicles.items.length > 0 && (
+        <section id="popsicles">
+          <h2 className="text-3xl font-bold mb-8 text-center">Popsicles</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortArrayByPrice(safePopsicles.items).map((item: any, index: number) => (
+              <GenericItemCard
+                key={`popsicle-${index}`}
+                item={item}
+                category="Popsicles"
+                slug="popsicles"
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Legacy Fallback if both empty */}
+      {safeCakesicles.items.length === 0 && safePopsicles.items.length === 0 && (
+        <section id="cakesicles-popsicles">
+          <h2 className="text-3xl font-bold mb-8 text-center">Cakesicles & Popsicles</h2>
+          <Card className="bg-primary/5 border-primary max-w-2xl mx-auto">
+            <CardHeader className="pb-3 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <CategoryIcon category="cakesicle" flavor="Cakesicle" />
+                <CardTitle className="font-semibold">Cakesicles & Popsicles</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex justify-between items-center">
+              <span className="text-muted-foreground font-medium">All flavors available</span>
+              <AddButton
+                uniqueKey="cakesicles-legacy"
+                onClick={() => handleAddToCart({ name: "Cakesicles (2 pcs)", price: 99, category: "Cakesicles" }, "cakesicles-legacy")}
+              />
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Dynamic / Generic Sections */}
+      {Object.entries(data || {})
+        .filter(([slug]) => ![
+          'cakes',
+          'cupcakes',
+          'jar-cakes',
+          'cheesecake',
+          'chocolates',
+          'liquor-chocolates',
+          'cakesicles',
+          'popsicles',
+          'cakesicles-popsicles'
+        ].includes(slug))
+        .map(([slug, cat]: [string, any]) => (
+          <section key={slug} id={slug} className="animate-fade-in-up">
+            <h2 className="text-3xl font-bold mb-8 text-center">{cat.title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortArrayByPrice(cat.items || []).map((item: any, index: number) => (
+                <GenericItemCard
+                  key={`${slug}-${index}`}
+                  item={item}
+                  category={cat.title}
+                  slug={slug}
+                  index={index}
+                />
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">{safeCakesicles.description || "All flavours available"}</p>
-            {safeCakesicles.items && safeCakesicles.items.length > 0 ? (
-              <div className="space-y-3">
-                {sortArrayByPrice(safeCakesicles.items).map((item: any, index: number) => (
-                  <div key={`${item.name}-${index}`} className="flex justify-between items-center">
-                    <div>
-                      <span className="font-semibold">{item.name}</span>
-                      {item.price_label && <span className="text-sm text-muted-foreground ml-2">({item.price_label})</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground font-medium">₹{item.price}</span>
-
-
-                      <AddButton
-                        uniqueKey={`cakesicles-${index}`}
-                        onClick={() =>
-                          handleAddToCart(
-                            {
-                              name: `${item.name} ${item.price_label ? `(${item.price_label})` : ""}`,
-                              price: item.price,
-                              category: "Cakesicles",
-                            },
-                            `cakesicles-${index}`,
-                          )
-                        }
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add
-                      </AddButton>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-medium">
-                  {safeCakesicles.offer || "2 for ₹99"}
-                </span>
-                <AddButton
-                  uniqueKey="cakesicles"
-                  onClick={() =>
-                    handleAddToCart({ name: "Cakesicles (2 pcs)", price: 99, category: "Cakesicles" }, "cakesicles")
-                  }
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add
-                </AddButton>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-secondary/5 border-secondary">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <CategoryIcon category="popsicle" flavor="Popsicle" />
-              <CardTitle className="text-2xl">{safePopsicles.title}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">{safePopsicles.description || "All flavours available"}</p>
-            {safePopsicles.items && safePopsicles.items.length > 0 ? (
-              <div className="space-y-3">
-                {sortArrayByPrice(safePopsicles.items).map((item: any, index: number) => (
-                  <div key={`${item.name}-${index}`} className="flex justify-between items-center">
-                    <div>
-                      <span className="font-semibold">{item.name}</span>
-                      {item.price_label && <span className="text-sm text-muted-foreground ml-2">({item.price_label})</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground font-medium">₹{item.price}</span>
-
-
-                      <AddButton
-                        uniqueKey={`popsicles-${index}`}
-                        onClick={() =>
-                          handleAddToCart(
-                            {
-                              name: `${item.name} ${item.price_label ? `(${item.price_label})` : ""}`,
-                              price: item.price,
-                              category: "Popsicles",
-                            },
-                            `popsicles-${index}`,
-                          )
-                        }
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add
-                      </AddButton>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-medium">{safePopsicles.offer || "3 for ₹99"}</span>
-                <AddButton
-                  uniqueKey="popsicles"
-                  onClick={() =>
-                    handleAddToCart({ name: "Popsicles (3 pcs)", price: 99, category: "Popsicles" }, "popsicles")
-                  }
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add
-                </AddButton>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+          </section>
+        ))}
     </>
   )
 }

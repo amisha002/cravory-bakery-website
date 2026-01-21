@@ -7,30 +7,35 @@ import { Cake, Cake as Cupcake, Wine, IceCream, Candy } from "lucide-react"
 
 const categories = [
   {
+    id: "cakes",
     name: "Cakes",
     description: "Custom eggless cakes in all flavors",
     icon: Cake,
     color: "bg-primary/10 text-primary",
   },
   {
+    id: "cupcakes",
     name: "Cupcakes",
     description: "Classic and premium varieties",
     icon: Cupcake,
     color: "bg-secondary/10 text-secondary",
   },
   {
+    id: "jar-cakes",
     name: "Jar Cakes",
     description: "Layered desserts in a jar",
     icon: Wine,
     color: "bg-accent/10 text-accent",
   },
   {
+    id: "chocolates",
     name: "Chocolates",
     description: "Handcrafted & liquor chocolates",
     icon: Candy,
     color: "bg-[#FFB7B2]/10 text-[#FFB7B2]",
   },
   {
+    id: "cakesicles-popsicles",
     name: "Cakesicles & Popsicles",
     description: "Fun treats on a stick",
     icon: IceCream,
@@ -74,11 +79,10 @@ export function CategoryHighlights() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {categories.map((category, index) => (
-            <Link key={category.name} href="/menu">
+            <Link key={category.name} href={`/menu?category=${category.id}`}>
               <Card
-                className={`group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full border-2 ${
-                  isVisible ? "animate-scale-in" : "opacity-0"
-                }`}
+                className={`group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full border-2 ${isVisible ? "animate-scale-in" : "opacity-0"
+                  }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <CardContent className="p-6 flex flex-col items-center text-center gap-4">

@@ -6,12 +6,14 @@ import { MenuSection } from "@/components/menu-section"
 import { Cake, Cherry, Candy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
 interface MenuItem {
   id: string
   category: string
+  category_id?: string
   subcategory: string | null
   item_name: string
   price_label: string
@@ -19,100 +21,84 @@ interface MenuItem {
   created_at: string
 }
 
-export default function MenuPage() {
+interface Category {
+  id: string
+  name: string
+  slug: string
+}
+
+function MenuContent() {
+  const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [menuData, setMenuData] = useState<any>(null)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState<string>("default")
 
   useEffect(() => {
-    fetchMenuItems()
+    fetchData()
   }, [])
 
-  const fetchMenuItems = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+
+      // Fetch categories
+      const { data: catData, error: catError } = await supabase
+        .from("menu_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("order_index")
+
+      if (catError) throw catError
+      setCategories(catData || [])
+
+      // Fetch items
+      const { data: itemData, error: itemError } = await supabase
         .from("menu_items")
         .select("*")
         .order("category", { ascending: true })
         .order("subcategory", { ascending: true })
         .order("item_name", { ascending: true })
 
-      if (error) throw error
+      if (itemError) throw itemError
+      setMenuItems(itemData || [])
 
-      const transformed = transformMenuData(data || [])
-      setMenuData(transformed)
     } catch (err) {
       console.error("Error fetching menu items:", err)
-      setMenuData(getDefaultMenuData())
     } finally {
       setLoading(false)
     }
   }
 
-  const transformMenuData = (items: MenuItem[]) => {
+  const transformMenuData = (items: MenuItem[], cats: Category[]) => {
     const grouped: Record<string, Record<string, any[]>> = {}
 
     items.forEach((item) => {
-      if (!grouped[item.category]) {
-        grouped[item.category] = {}
+      const catName = item.category
+      if (!grouped[catName]) {
+        grouped[catName] = {}
       }
-      if (!grouped[item.category][item.item_name]) {
-        grouped[item.category][item.item_name] = []
+      if (!grouped[catName][item.item_name]) {
+        grouped[catName][item.item_name] = []
       }
-      grouped[item.category][item.item_name].push({
+      grouped[catName][item.item_name].push({
         price_label: item.price_label,
         price: item.price,
         subcategory: item.subcategory,
       })
     })
 
-    const result: any = {
-      cakes: {
-        title: "Cakes (Eggless)",
-        subtitle: "Customized cakes available",
+    const result: any = {}
+    cats.forEach(cat => {
+      result[cat.slug] = {
+        id: cat.id,
+        title: cat.name,
+        slug: cat.slug,
         items: [],
-        special: null,
-      },
-      cupcakes: {
-        title: "Cupcakes (Eggless)",
-        classic: [],
-        premium: [],
-        chocolate: [],
-        boxes: [],
-      },
-      jarCakes: {
-        title: "Jar Cakes (Eggless)",
-        items: [],
-      },
-      cheesecake: {
-        title: "Cheesecake Slice (Eggless)",
-        items: [],
-      },
-      chocolates: {
-        title: "Chocolates (Eggless)",
-        varieties: [],
-        flavours: [],
-      },
-      liquorChocolates: {
-        title: "Liquor Chocolates (Eggless)",
-        boxes: [],
-        flavours: [],
-      },
-      cakesicles: {
-        title: "Cakesicles (Eggless)",
-        offer: "2 for ₹99",
-        description: "All flavours available",
-        items: [],
-      },
-      popsicles: {
-        title: "Popsicles (Eggless)",
-        offer: "3 for ₹99",
-        description: "All flavours available",
-        items: [],
-      },
-    }
+        dynamic: true
+      }
+    })
 
     const extractPieces = (text: string): number | null => {
       const match = text.match(/(\d+)\s*(?:pcs|pieces|pc)/i)
@@ -121,27 +107,14 @@ export default function MenuPage() {
 
     Object.keys(grouped).forEach((category) => {
       const categoryLower = category.toLowerCase().trim()
+      const foundCat = cats.find(c => c.name.toLowerCase().trim() === categoryLower)
+      const targetSlug = foundCat?.slug || categoryLower.replace(/\s+/g, '-')
 
-      if (categoryLower === "cakes") {
-        Object.keys(grouped[category]).forEach((itemName) => {
-          const prices = grouped[category][itemName]
-          const halfPound = prices.find((p) => p.price_label === "Half Pound")
-          const onePound = prices.find((p) => p.price_label === "1 Pound")
+      if (!result[targetSlug]) {
+        result[targetSlug] = { title: category, slug: targetSlug, items: [], dynamic: true }
+      }
 
-          if (halfPound || onePound) {
-            const itemData = {
-              name: itemName,
-              halfPound: halfPound?.price || 0,
-              onePound: onePound?.price || 0,
-            }
-            if (itemName.toLowerCase().includes("dry fruit") || itemName.toLowerCase().includes("nut") || itemName.toLowerCase().includes("no maida")) {
-              result.cakes.special = itemData
-            } else {
-              result.cakes.items.push(itemData)
-            }
-          }
-        })
-      } else if (categoryLower === "cupcakes") {
+      if (categoryLower === "cupcakes") {
         const cupcakeBySubcategory: Record<string, any[]> = {
           Classic: [],
           Premium: [],
@@ -157,64 +130,32 @@ export default function MenuPage() {
             const priceLabel = item.price_label.toLowerCase()
             const itemKey = `${item.item_name}-${item.subcategory || ""}`
 
-            if (priceLabel.includes("pcs") || priceLabel.includes("pieces")) {
+            if (priceLabel.includes("pieces") || priceLabel.includes("pcs")) {
               const pieces = extractPieces(item.price_label) || extractPieces(item.item_name)
               if (pieces && pieces > 0 && !cupcakeBoxes.find((b) => b.pieces === pieces && b.item_name === item.item_name)) {
-                cupcakeBoxes.push({
-                  pieces,
-                  price,
-                  item_name: item.item_name,
-                })
+                cupcakeBoxes.push({ pieces, price, item_name: item.item_name })
               }
             } else if (item.subcategory && !processedItems.has(itemKey)) {
               const subcategoryKey = item.subcategory as keyof typeof cupcakeBySubcategory
               if (cupcakeBySubcategory[subcategoryKey]) {
-                cupcakeBySubcategory[subcategoryKey].push({
-                  name: item.item_name,
-                  price,
-                })
+                cupcakeBySubcategory[subcategoryKey].push({ name: item.item_name, price })
                 processedItems.add(itemKey)
               }
             } else if (!item.subcategory && !processedItems.has(itemKey)) {
-              cupcakeBySubcategory.Classic.push({
-                name: item.item_name,
-                price,
-              })
+              cupcakeBySubcategory.Classic.push({ name: item.item_name, price })
               processedItems.add(itemKey)
             }
           })
 
-        result.cupcakes.classic = cupcakeBySubcategory.Classic
-        result.cupcakes.premium = cupcakeBySubcategory.Premium
-        result.cupcakes.chocolate = cupcakeBySubcategory["Chocolate Specials"]
-        result.cupcakes.boxes = cupcakeBoxes.sort((a, b) => a.pieces - b.pieces)
-      } else if (categoryLower === "jar cakes") {
-        Object.keys(grouped[category]).forEach((itemName) => {
-          const prices = grouped[category][itemName]
-          const priceItem = prices.find((p) => p.price_label === "Per Piece" || p.price_label === "Price") || prices[0]
-          if (priceItem && priceItem.price > 0) {
-            result.jarCakes.items.push({
-              name: itemName,
-              price: priceItem.price,
-            })
-          }
-        })
-      } else if (categoryLower === "cheesecake") {
-        Object.keys(grouped[category]).forEach((itemName) => {
-          const prices = grouped[category][itemName]
-          const priceItem = prices.find((p) => p.price_label === "Slice" || p.price_label === "Per Piece" || p.price_label === "Price") || prices[0]
-          if (priceItem && priceItem.price > 0) {
-            result.cheesecake.items.push({
-              name: itemName,
-              price: priceItem.price,
-            })
-          }
-        })
-      } else if (categoryLower === "chocolates") {
+        result[targetSlug].classic = cupcakeBySubcategory.Classic
+        result[targetSlug].premium = cupcakeBySubcategory.Premium
+        result[targetSlug].chocolate = cupcakeBySubcategory["Chocolate Specials"]
+        result[targetSlug].boxes = cupcakeBoxes.sort((a, b) => a.pieces - b.pieces)
+      } else if (categoryLower === "chocolates" || categoryLower === "liquor chocolates") {
         const chocolateByFlavour: Record<string, { price: number; boxes: any[] }> = {}
 
         items
-          .filter((item) => item.category.toLowerCase().trim() === "chocolates")
+          .filter((item) => item.category.toLowerCase().trim() === categoryLower)
           .forEach((item) => {
             const flavour = item.item_name
             const price = item.price
@@ -228,142 +169,84 @@ export default function MenuPage() {
             if (priceLabel === "per piece" || priceLabel === "price") {
               chocolateByFlavour[flavour].price = price
             } else if (pieces && pieces > 0) {
-              chocolateByFlavour[flavour].boxes.push({
-                pieces,
-                price,
-              })
+              chocolateByFlavour[flavour].boxes.push({ pieces, price })
             }
           })
 
-        result.chocolates.varieties = Object.keys(chocolateByFlavour)
-        result.chocolates.flavours = Object.keys(chocolateByFlavour)
+        result[targetSlug].flavours = Object.keys(chocolateByFlavour)
           .filter(flavour => chocolateByFlavour[flavour].price > 0)
           .map((flavour) => ({
             name: flavour,
             price: chocolateByFlavour[flavour].price,
             boxes: chocolateByFlavour[flavour].boxes.sort((a: any, b: any) => a.pieces - b.pieces),
           }))
-      } else if (categoryLower === "liquor chocolates") {
-        const liquorByFlavour: Record<string, { price: number; boxes: any[] }> = {}
-
-        items
-          .filter((item) => item.category.toLowerCase().trim() === "liquor chocolates")
-          .forEach((item) => {
-            const flavour = item.item_name
-            const price = item.price
-            const priceLabel = item.price_label.toLowerCase()
-            const pieces = extractPieces(item.price_label) || extractPieces(item.item_name)
-
-            if (!liquorByFlavour[flavour]) {
-              liquorByFlavour[flavour] = { price: 0, boxes: [] }
-            }
-
-            if (priceLabel === "per piece" || priceLabel === "price") {
-              liquorByFlavour[flavour].price = price
-            } else if (pieces && pieces > 0) {
-              liquorByFlavour[flavour].boxes.push({
-                pieces,
-                price,
-              })
-            }
-          })
-
-        result.liquorChocolates.flavours = Object.keys(liquorByFlavour)
-          .filter(flavour => liquorByFlavour[flavour].price > 0)
-          .map((flavour) => ({
-            name: flavour,
-            price: liquorByFlavour[flavour].price,
-            boxes: liquorByFlavour[flavour].boxes.sort((a: any, b: any) => a.pieces - b.pieces),
+      } else {
+        // Standard grouping for Cakes, Jar Cakes, Cheesecake, Cakesicles, Popsicles, and all other categories
+        Object.keys(grouped[category]).forEach((itemName) => {
+          const rawPrices = grouped[category][itemName]
+          const variants = rawPrices.map(p => ({
+            label: p.price_label || "Standard",
+            price: p.price
           }))
-      } else if (categoryLower === "cakesicles") {
-        const cakesicleItems: any[] = []
 
-        items
-          .filter((item) => item.category.toLowerCase().trim() === "cakesicles")
-          .forEach((item) => {
-            cakesicleItems.push({
-              name: item.item_name,
-              price_label: item.price_label,
-              price: item.price,
-            })
+          // Sort variants logically
+          variants.sort((a, b) => {
+            const labelA = a.label.toLowerCase()
+            const labelB = b.label.toLowerCase()
+
+            // 1. Weight-based sorting (Half Pound < 1 Pound)
+            const getWeightValue = (label: string) => {
+              if (label.includes("half")) return 0.5
+              if (label.includes("1 pound") || (label.includes("1") && label.includes("pound"))) return 1
+              if (label.includes("1.5 pound")) return 1.5
+              if (label.includes("2 pound")) return 2
+              return null
+            }
+
+            const wa = getWeightValue(labelA)
+            const wb = getWeightValue(labelB)
+            if (wa !== null && wb !== null) return wa - wb
+            if (wa !== null) return -1
+            if (wb !== null) return 1
+
+            // 2. Piece-based sorting (Smaller < Larger)
+            const pa = extractPieces(labelA)
+            const pb = extractPieces(labelB)
+            if (pa !== null && pb !== null) return pa - pb
+            if (pa !== null) return -1
+            if (pb !== null) return 1
+
+            // 3. Fallback to Price sorting
+            return a.price - b.price
           })
 
-        if (cakesicleItems.length > 0) {
-          result.cakesicles.items = cakesicleItems
-          const firstItem = cakesicleItems[0]
-          result.cakesicles.offer = firstItem.price_label || "2 for ₹99"
-          result.cakesicles.description = "All flavours available"
-        }
-      } else if (categoryLower === "popsicles") {
-        const popsicleItems: any[] = []
+          const itemData = {
+            name: itemName,
+            variants: variants
+          }
 
-        items
-          .filter((item) => item.category.toLowerCase().trim() === "popsicles")
-          .forEach((item) => {
-            popsicleItems.push({
-              name: item.item_name,
-              price_label: item.price_label,
-              price: item.price,
-            })
-          })
+          if (categoryLower === "cakes" && (itemName.toLowerCase().includes("dry fruit") || itemName.toLowerCase().includes("nut") || itemName.toLowerCase().includes("no maida"))) {
+            result[targetSlug].special = itemData
+          } else {
+            result[targetSlug].items.push(itemData)
+          }
 
-        if (popsicleItems.length > 0) {
-          result.popsicles.items = popsicleItems
-          const firstItem = popsicleItems[0]
-          result.popsicles.offer = firstItem.price_label || "3 for ₹99"
-          result.popsicles.description = "All flavours available"
-        }
+          // Legacy fields for backward compatibility during transition
+          if (categoryLower === "cakesicles" || categoryLower === "popsicles") {
+            result[targetSlug].offer = variants[0]?.label || ""
+            result[targetSlug].description = "All flavours available"
+          }
+        })
       }
     })
 
     return result
   }
 
-  const getDefaultMenuData = () => ({
-    cakes: {
-      title: "Cakes (Eggless)",
-      subtitle: "Customized cakes available",
-      items: [],
-      special: null,
-    },
-    cupcakes: {
-      title: "Cupcakes (Eggless)",
-      classic: [],
-      premium: [],
-      chocolate: [],
-      boxes: [],
-    },
-    jarCakes: {
-      title: "Jar Cakes (Eggless)",
-      items: [],
-    },
-    cheesecake: {
-      title: "Cheesecake Slice (Eggless)",
-      items: [],
-    },
-    chocolates: {
-      title: "Chocolates (Eggless)",
-      varieties: [],
-      flavours: [],
-    },
-    liquorChocolates: {
-      title: "Liquor Chocolates (Eggless) ",
-      boxes: [],
-      flavours: [],
-    },
-    cakesicles: {
-      title: "Cakesicles (Eggless)",
-      offer: "2 for ₹99",
-      description: "All flavours available",
-      items: [],
-    },
-    popsicles: {
-      title: "Popsicles (Eggless)",
-      offer: "3 for ₹99",
-      description: "All flavours available",
-      items: [],
-    },
-  })
+  const menuData = useMemo(() => {
+    if (!menuItems.length || !categories.length) return null
+    return transformMenuData(menuItems, categories)
+  }, [menuItems, categories])
 
   const scrollToCategory = (categoryId: string) => {
     setActiveCategory(categoryId)
@@ -379,6 +262,16 @@ export default function MenuPage() {
       })
     }
   }
+
+  useEffect(() => {
+    const categoryQuery = searchParams.get("category")
+    if (categoryQuery && !loading && menuData) {
+      const timer = setTimeout(() => {
+        scrollToCategory(categoryQuery)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams, loading, menuData])
 
   return (
     <div className="min-h-screen">
@@ -416,89 +309,34 @@ export default function MenuPage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex gap-2 justify-center items-center">
             <div className="hidden sm:flex gap-2 justify-center overflow-x-auto scrollbar-hide">
-              <Button
-                variant={activeCategory === "cakes" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("cakes")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Cakes
-              </Button>
-
-              <Button
-                variant={activeCategory === "cupcakes" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("cupcakes")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Cupcakes
-              </Button>
-
-              <Button
-                variant={activeCategory === "jar-cakes" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("jar-cakes")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Jar Cakes
-              </Button>
-
-              <Button
-                variant={activeCategory === "cheesecake" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("cheesecake")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Cheesecake
-              </Button>
-
-              <Button
-                variant={activeCategory === "chocolates" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("chocolates")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Chocolates
-              </Button>
-
-              <Button
-                variant={activeCategory === "liquor-chocolates" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("liquor-chocolates")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Liquor Chocolates
-              </Button>
-
-              <Button
-                variant={activeCategory === "cakesicles-popsicles" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => scrollToCategory("cakesicles-popsicles")}
-                className="whitespace-nowrap rounded-full"
-              >
-                Cakesicles & Popsicles
-              </Button>
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={activeCategory === cat.slug ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => scrollToCategory(cat.slug)}
+                  className="whitespace-nowrap rounded-full"
+                >
+                  {cat.name}
+                </Button>
+              ))}
             </div>
 
-            {/* Mobile: category selector */}
             <div className="sm:hidden">
-              <Select value={activeCategory ?? ""} onValueChange={(v) => scrollToCategory(v || "cakes")}>
+              <Select value={activeCategory ?? ""} onValueChange={(v) => scrollToCategory(v)}>
                 <SelectTrigger className="w-40 h-8 text-sm">
                   <SelectValue placeholder="Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cakes">Cakes</SelectItem>
-                  <SelectItem value="cupcakes">Cupcakes</SelectItem>
-                  <SelectItem value="jar-cakes">Jar Cakes</SelectItem>
-                  <SelectItem value="cheesecake">Cheesecake</SelectItem>
-                  <SelectItem value="chocolates">Chocolates</SelectItem>
-                  <SelectItem value="liquor-chocolates">Liquor Chocolates</SelectItem>
-                  <SelectItem value="cakesicles-popsicles">Cakesicles & Popsicles</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Sort control (available on all sizes) */}
             <div className="ml-2">
               <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="w-44 h-8 text-sm">
@@ -533,5 +371,20 @@ export default function MenuPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function MenuPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center animate-pulse">
+          <div className="w-16 h-16 bg-primary/20 rounded-full mx-auto mb-4" />
+          <p className="text-muted-foreground">Preparing Sweetness...</p>
+        </div>
+      </div>
+    }>
+      <MenuContent />
+    </Suspense>
   )
 }
