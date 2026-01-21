@@ -43,6 +43,11 @@ export function Footer() {
                   About
                 </Link>
               </li>
+              <li className="pt-2 text-[10px] opacity-40 hover:opacity-100 transition-opacity">
+                <Link href="/admin/login" className="text-muted-foreground hover:text-primary">
+                  Admin Login
+                </Link>
+              </li>
             </ul>
           </div>
 

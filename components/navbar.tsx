@@ -5,10 +5,12 @@ import { useState } from "react"
 import { Menu, X, ShoppingCart, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart-provider"
+import { useAdminAuth } from "@/lib/auth"
 import Image from "next/image"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { user, loading: authLoading } = useAdminAuth()
   const { items } = useCart()
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -47,6 +49,14 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {!authLoading && user && (
+              <Link
+                href="/admin-menu"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors hover:scale-110 inline-block"
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -93,6 +103,15 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              {!authLoading && user && (
+                <Link
+                  href="/admin-menu"
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors border-t border-border pt-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Admin Dashboard
+                </Link>
+              )}
             </div>
           </div>
         )}
